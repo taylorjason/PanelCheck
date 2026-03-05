@@ -172,6 +172,8 @@ function applyFilters() {
     const panel = document.getElementById('panel-filter').value;
     const marker = document.getElementById('marker-filter').value;
 
+    console.log('Applying filters - date:', dateFrom, dateTo, 'panel:', panel, 'marker:', marker);
+
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
         let obsPanel = '';
@@ -192,6 +194,7 @@ function applyFilters() {
         return true;
     });
 
+    console.log('Filtered observations:', filteredObservations.length);
     displayObservations(filteredObservations);
     renderChartsWithSelectedPanels(filteredObservations);
 }
