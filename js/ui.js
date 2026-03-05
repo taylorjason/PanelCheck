@@ -11,7 +11,7 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
-    document.getElementById('chart-markers').addEventListener('change', (e) => {
+    document.getElementById('chart-panels').addEventListener('change', (e) => {
         // Limit to 3 selections
         const selected = Array.from(e.target.selectedOptions);
         if (selected.length > 3) {
@@ -124,7 +124,7 @@ export function displayObservations(observations) {
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
     const markerSelect = document.getElementById('marker-filter');
-    const chartMarkerSelect = document.getElementById('chart-markers');
+    const chartPanelSelect = document.getElementById('chart-panels');
 
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
@@ -153,13 +153,13 @@ function updateFilters() {
         markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
     });
 
-    // Populate chart markers multi-select
-    chartMarkerSelect.innerHTML = '';
-    markers.forEach(marker => {
+    // Populate chart panels multi-select
+    chartPanelSelect.innerHTML = '';
+    panels.forEach(panel => {
         const option = document.createElement('option');
-        option.value = marker;
-        option.textContent = marker;
-        chartMarkerSelect.appendChild(option);
+        option.value = panel;
+        option.textContent = panel;
+        chartPanelSelect.appendChild(option);
     });
 }
 
@@ -193,33 +193,31 @@ function applyFilters() {
     });
 
     displayObservations(filteredObservations);
-    renderChartsWithSelectedMarkers(filteredObservations);
+    renderChartsWithSelectedPanels(filteredObservations);
 }
 
 /**
- * Render charts for selected markers only
+ * Render charts for selected panels only
  * @param {Array} observations
  */
-function renderChartsWithSelectedMarkers(observations) {
-    const chartMarkerSelect = document.getElementById('chart-markers');
-    const selectedMarkers = Array.from(chartMarkerSelect.selectedOptions).map(o => o.value);
+function renderChartsWithSelectedPanels(observations) {
+    const chartPanelSelect = document.getElementById('chart-panels');
+    const selectedPanels = Array.from(chartPanelSelect.selectedOptions).map(o => o.value);
     
-    // If no markers selected, show all
-    if (selectedMarkers.length === 0) {
+    // If no panels selected, show all
+    if (selectedPanels.length === 0) {
         renderCharts(observations);
         return;
     }
 
-    // Filter observations to only selected markers
+    // Filter observations to only selected panels
     const filtered = observations.filter(obs => {
-        let obsMarker = '';
+        let obsPanel = '';
         if (obs.code && obs.code.text) {
             const parts = obs.code.text.split(' - ');
-            obsMarker = parts[1] || '';
-        } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
-            obsMarker = obs.code.coding[0].display || '';
+            obsPanel = parts[0];
         }
-        return selectedMarkers.includes(obsMarker);
+        return selectedPanels.includes(obsPanel);
     });
 
     renderCharts(filtered);
