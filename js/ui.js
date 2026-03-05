@@ -44,8 +44,17 @@ function handleFileUpload() {
                 throw new Error('Unsupported file type');
             }
 
-            // Save new observations (append to existing)
+            // Save new observations (append to existing and deduplicate by ID)
             allObservations = [...allObservations, ...newObservations];
+            // Remove duplicates by ID, keeping first occurrence
+            const seenIds = new Set();
+            allObservations = allObservations.filter(obs => {
+                if (seenIds.has(obs.id)) {
+                    return false;
+                }
+                seenIds.add(obs.id);
+                return true;
+            });
             saveRecords(allObservations);
             filteredObservations = [...allObservations];
             displayObservations(filteredObservations);

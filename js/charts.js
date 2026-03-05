@@ -4,11 +4,13 @@
  * @param {Array} observations
  */
 export function renderCharts(observations) {
-    const ctx = document.getElementById('trend-chart').getContext('2d');
+    const canvasElement = document.getElementById('trend-chart');
+    const ctx = canvasElement.getContext('2d');
 
     // Destroy existing chart if any
     if (window.trendChart) {
         window.trendChart.destroy();
+        window.trendChart = null;
     }
 
     if (observations.length === 0) {
