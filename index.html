@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloodwork Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+    <script>
+        // Point PDF.js worker to CDN so it can parse PDFs off the main thread
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Bloodwork Visualizer</h1>
+    </header>
+
+    <main>
+        <section id="upload-section">
+            <h2>Upload Bloodwork Data</h2>
+            <input type="file" id="file-input" accept=".csv,.json,.pdf">
+            <button id="upload-btn">Upload</button>
+            <div id="upload-status"></div>
+        </section>
+
+        <section id="filters-section">
+            <h2>Filters</h2>
+            <div>
+                <label for="date-from">From:</label>
+                <input type="date" id="date-from">
+                <label for="date-to">To:</label>
+                <input type="date" id="date-to">
+            </div>
+            <div>
+                <label for="panel-filter">Panel:</label>
+                <select id="panel-filter">
+                    <option value="">All</option>
+                </select>
+                <label for="marker-filter">Markers (select multiple):</label>
+                <select id="marker-filter" multiple size="6">
+                </select>
+                <p style="font-size: small; color: #666;">Hold Ctrl/Cmd to select multiple</p>
+            </div>
+            <button id="apply-filters-btn">Apply Filters</button>
+        </section>
+
+        <section id="data-section">
+            <h2>Data</h2>
+            <div id="records-table"></div>
+        </section>
+
+        <section id="charts-section">
+            <h2>Charts</h2>
+            <canvas id="trend-chart"></canvas>
+        </section>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
