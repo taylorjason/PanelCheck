@@ -321,7 +321,10 @@ function setupMarkerDropdown() {
     });
 
     searchInput.addEventListener('blur', () => {
-        hideTimeout = setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+        hideTimeout = setTimeout(() => { 
+            dropdown.style.display = 'none';
+            searchInput.value = '';
+        }, 200);
     });
 
     searchInput.addEventListener('input', (e) => {
