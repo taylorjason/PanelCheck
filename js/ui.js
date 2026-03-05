@@ -46,6 +46,8 @@ function handleFileUpload() {
 
             // Save new observations (append to existing and deduplicate by ID)
             allObservations = [...allObservations, ...newObservations];
+            console.log('Parsed observations:', newObservations);
+            console.log('Total observations before dedup:', allObservations.length);
             // Remove duplicates by ID, keeping first occurrence
             const seenIds = new Set();
             allObservations = allObservations.filter(obs => {
@@ -55,6 +57,7 @@ function handleFileUpload() {
                 seenIds.add(obs.id);
                 return true;
             });
+            console.log('Total observations after dedup:', allObservations.length);
             saveRecords(allObservations);
             filteredObservations = [...allObservations];
             displayObservations(filteredObservations);
