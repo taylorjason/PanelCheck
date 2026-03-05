@@ -140,6 +140,11 @@ function parseFHIRBundle(bundle) {
         observations.push(resource);
     }
 
+    if (observations.length === 0) {
+        // No valid observations found -> invalid FHIR bundle
+        throw new Error('Invalid FHIR Bundle');
+    }
+
     return observations;
 }
 
