@@ -11,6 +11,7 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
     setupMarkerDropdown();
 
     // Load existing observations and re-process to apply updated panel mappings
@@ -142,8 +143,24 @@ export function displayObservations(observations) {
 }
 
 /**
- * Update filter options
+ * Clear all filter selections
  */
+function clearFilters() {
+    // Clear panel selection
+    document.getElementById('panel-filter').value = '';
+    
+    // Clear marker selections
+    updateSelectedMarkersDisplay([]);
+    updateMarkerOptionsHighlight();
+    
+    // Clear date filters
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    
+    // Close marker dropdown
+    document.getElementById('marker-dropdown').style.display = 'none';
+    document.getElementById('marker-search').value = '';
+}
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
 
@@ -203,6 +220,10 @@ function toggleMarker(marker) {
         selectedMarkers.push(marker);
     }
 
+    // Store current scroll position
+    const markerOptions = document.getElementById('marker-options');
+    const scrollTop = markerOptions.scrollTop;
+
     updateSelectedMarkersDisplay(selectedMarkers);
     updateMarkerOptionsHighlight();
 
@@ -211,6 +232,9 @@ function toggleMarker(marker) {
     const searchInput = document.getElementById('marker-search');
     dropdown.style.display = 'block';
     filterMarkerOptions(searchInput.value);
+    
+    // Restore scroll position
+    markerOptions.scrollTop = scrollTop;
 }
 
 /**
@@ -242,6 +266,11 @@ function updateSelectedMarkersDisplay(selectedMarkers) {
  */
 window.removeMarker = function(marker) {
     const selectedMarkers = getSelectedMarkers().filter(m => m !== marker);
+    
+    // Store current scroll position
+    const markerOptions = document.getElementById('marker-options');
+    const scrollTop = markerOptions.scrollTop;
+    
     updateSelectedMarkersDisplay(selectedMarkers);
     updateMarkerOptionsHighlight();
 
@@ -249,6 +278,9 @@ window.removeMarker = function(marker) {
     const searchInput = document.getElementById('marker-search');
     dropdown.style.display = 'block';
     filterMarkerOptions(searchInput.value);
+    
+    // Restore scroll position
+    markerOptions.scrollTop = scrollTop;
 };
 
 /**
@@ -324,9 +356,11 @@ function applyFilters() {
 
         if (dateFrom && obsDate < dateFrom) return false;
         if (dateTo && obsDate > dateTo) return false;
+        // Markers take priority: if any are selected, ignore the panel filter
+        if (selectedMarkers.length > 0) {
+            return selectedMarkers.includes(obsMarker);
+        }
         if (panel && obsPanel !== panel) return false;
-        // If any markers are selected, only show those; otherwise show all
-        if (selectedMarkers.length > 0 && !selectedMarkers.includes(obsMarker)) return false;
         return true;
     });
 

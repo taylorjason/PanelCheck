@@ -41,6 +41,14 @@ button {
     cursor: pointer;
 }
 
+#clear-filters-btn {
+    background: #6c757d;
+}
+
+#clear-filters-btn:hover {
+    background: #5a6268;
+}
+
 button:hover {
     background: #0056b3;
 }
