@@ -1,10 +1,9 @@
-import Chart from 'chart.js/auto';
-
 /**
- * Render charts based on records
- * @param {Array} records
+ * Render charts based on observations
+ * Uses global Chart object loaded from CDN
+ * @param {Array} observations
  */
-export function renderCharts(records) {
+export function renderCharts(observations) {
     const ctx = document.getElementById('trend-chart').getContext('2d');
 
     // Destroy existing chart if any
@@ -12,19 +11,20 @@ export function renderCharts(records) {
         window.trendChart.destroy();
     }
 
-    if (records.length === 0) {
+    if (observations.length === 0) {
         return;
     }
 
-    // Group records by marker
+    // Group observations by marker
     const markerGroups = {};
-    records.forEach(record => {
-        if (!markerGroups[record.marker]) {
-            markerGroups[record.marker] = [];
+    observations.forEach(obs => {
+        const markerText = obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : 'Unknown';
+        if (!markerGroups[markerText]) {
+            markerGroups[markerText] = [];
         }
-        markerGroups[record.marker].push({
-            x: record.date,
-            y: record.value
+        markerGroups[markerText].push({
+            x: obs.effectiveDateTime || obs.date,
+            y: obs.valueQuantity && obs.valueQuantity.value
         });
     });
 
