@@ -187,8 +187,6 @@ export function mapMarkerToPanel(marker) {
         'Glucose Lvl': 'Metabolic Panel',
         'Glucose': 'Metabolic Panel',
         'BUN': 'Metabolic Panel',
-        'Creatinine Level': 'Metabolic Panel',
-        'Creatinine': 'Metabolic Panel',
         'Sodium': 'Metabolic Panel',
         'Potassium Lvl': 'Metabolic Panel',
         'Chloride': 'Metabolic Panel',
@@ -205,6 +203,9 @@ export function mapMarkerToPanel(marker) {
         'GGT': 'Liver Function',
         
         // Kidney Function
+        'BUN': 'Kidney Function',
+        'Creatinine Level': 'Kidney Function',
+        'Creatinine': 'Kidney Function',
         'BUN/Creat Ratio': 'Kidney Function',
         'eGFR': 'Kidney Function',
         
