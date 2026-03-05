@@ -117,7 +117,6 @@ export function displayObservations(observations) {
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
     const markerSelect = document.getElementById('marker-filter');
-    const chartPanelSelect = document.getElementById('chart-panels');
 
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
@@ -141,7 +140,7 @@ function updateFilters() {
         panelSelect.innerHTML += `<option value="${panel}">${panel}</option>`;
     });
 
-    markerSelect.innerHTML = '<option value="">All</option>';
+    markerSelect.innerHTML = '';
     markers.forEach(marker => {
         markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
     });
@@ -154,7 +153,8 @@ function applyFilters() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     const panel = document.getElementById('panel-filter').value;
-    const marker = document.getElementById('marker-filter').value;
+    const markerSelect = document.getElementById('marker-filter');
+    const selectedMarkers = Array.from(markerSelect.selectedOptions).map(o => o.value);
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
@@ -172,7 +172,8 @@ function applyFilters() {
         if (dateFrom && obsDate < dateFrom) return false;
         if (dateTo && obsDate > dateTo) return false;
         if (panel && obsPanel !== panel) return false;
-        if (marker && obsMarker !== marker) return false;
+        // If any markers are selected, only show those; otherwise show all
+        if (selectedMarkers.length > 0 && !selectedMarkers.includes(obsMarker)) return false;
         return true;
     });
 
