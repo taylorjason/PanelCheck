@@ -1,37 +1,59 @@
 import { loadRecords, saveRecords } from './storage.js';
-import { parseFile, mapMarkerToPanel } from './parser.js';
+import { parseFile } from './parser.js';
 import { renderCharts } from './charts.js';
+import { getApiKey, setApiKey, clearApiKey, parseLLM } from './llm-parser.js';
 
 let allObservations = [];
 let filteredObservations = [];
+
+// File + content from the last upload attempt, kept so "Try AI Parsing" can
+// reuse them without asking the user to pick the file again.
+let _lastFile = null;
+let _lastContent = null;
 
 /**
  * Initialize the UI
  */
 export function initUI() {
+    // Upload
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
+
+    // AI suggestion banner
+    document.getElementById('try-ai-btn').addEventListener('click', handleTryAI);
+
+    // Settings toggle (collapsible)
+    document.getElementById('settings-toggle').addEventListener('click', toggleSettings);
+
+    // API key controls
+    document.getElementById('save-api-key-btn').addEventListener('click', handleSaveApiKey);
+    document.getElementById('clear-api-key-btn').addEventListener('click', handleClearApiKey);
+
+    // Restore API key field if one was previously saved
+    const savedKey = getApiKey();
+    if (savedKey) {
+        document.getElementById('api-key-input').value = savedKey;
+        setApiKeyStatus('Key loaded from storage');
+    }
+
+    // Filters
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
-    document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
-    setupMarkerDropdown();
 
-    // Load existing observations and re-process to apply updated panel mappings
+    // Load existing observations
     allObservations = loadRecords();
-    allObservations = reprocessObservations(allObservations);
-    saveRecords(allObservations);
-
     filteredObservations = [...allObservations];
     displayObservations(filteredObservations);
     updateFilters();
     renderCharts(filteredObservations);
 }
 
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
 /**
- * Handle file upload — routes to the correct parser via parseFile(),
- * which selects the adapter based on file extension.
- * PDFs are read as ArrayBuffer; all other formats as text.
+ * Handle file upload — tries the built-in adapters first.
+ * If the result looks incomplete (PDF with very few rows, or 0 results for any
+ * format), surfaces an "Try AI Parsing" suggestion without blocking the user.
  */
 function handleFileUpload() {
-    console.log('handleFileUpload called');
     const fileInput = document.getElementById('file-input');
     const file = fileInput.files[0];
     if (!file) {
@@ -39,33 +61,23 @@ function handleFileUpload() {
         return;
     }
 
+    hideAISuggestion();
+
     const isPDF = file.name.toLowerCase().endsWith('.pdf');
     const reader = new FileReader();
 
     reader.onload = async (e) => {
+        const content = e.target.result;
+        _lastFile = file;
+        _lastContent = content;
+
         try {
-            const newObservations = await parseFile(file, e.target.result);
-
-            if (newObservations.length === 0) {
-                showStatus('No observations found in file. Check that the file contains lab results.');
-                return;
-            }
-
-            allObservations = [...allObservations, ...newObservations];
-            console.log('Parsed observations:', newObservations.length);
-            console.log('Total observations before dedup:', allObservations.length);
-            // Deduplication happens in saveRecords via storage.js
-            saveRecords(allObservations);
-            // Reload from storage to get deduplicated list
-            allObservations = loadRecords();
-            console.log('Total observations after dedup:', allObservations.length);
-            filteredObservations = [...allObservations];
-            displayObservations(filteredObservations);
-            updateFilters();
-            renderCharts(filteredObservations);
-            showStatus(`Uploaded ${newObservations.length} observation(s)`);
-        } catch (error) {
-            showStatus(`Error: ${error.message}`);
+            const newObservations = await parseFile(file, content);
+            _handleParseResult(newObservations, isPDF);
+        } catch (err) {
+            // Unsupported format or complete parse failure
+            showStatus(`Could not parse file: ${err.message}`);
+            showAISuggestion('The built-in parser could not read this format.');
         }
     };
 
@@ -77,24 +89,128 @@ function handleFileUpload() {
 }
 
 /**
- * Re-process observations to apply updated panel mappings.
- * Ensures any previously stored data uses the current panel names.
+ * Decide what to show based on parse results:
+ *   - 0 results          → save nothing, always suggest AI
+ *   - PDF, few results   → save & display, suggest AI (may have missed data)
+ *   - Good results       → save & display, no AI suggestion needed
+ *
+ * "Few" means < 3 observations — heuristic threshold for suspicious PDF parses.
  */
-function reprocessObservations(observations) {
-    return observations.map(obs => {
-        if (obs.code && obs.code.text) {
-            const parts = obs.code.text.split(' - ');
-            if (parts.length > 1) {
-                const marker = parts[1];
-                obs.code.text = `${mapMarkerToPanel(marker)} - ${marker}`;
-            } else {
-                const marker = obs.code.text;
-                obs.code.text = `${mapMarkerToPanel(marker)} - ${marker}`;
-            }
-        }
-        return obs;
-    });
+function _handleParseResult(newObservations, isPDF) {
+    if (newObservations.length === 0) {
+        showStatus('No observations found.');
+        showAISuggestion('The built-in parser found nothing. AI parsing handles more formats.');
+        return;
+    }
+
+    // Save and display whatever was found
+    _saveAndRefresh(newObservations);
+    showStatus(`Uploaded ${newObservations.length} observation(s).`);
+
+    // For PDFs with suspiciously few results, offer AI as a more accurate option
+    if (isPDF && newObservations.length < 3) {
+        showAISuggestion(
+            `Only ${newObservations.length} result(s) found — PDF layouts vary. AI parsing may extract more.`
+        );
+    }
 }
+
+// ─── AI suggestion ────────────────────────────────────────────────────────────
+
+/**
+ * Called when the user clicks "Try AI Parsing".
+ * If no API key is set, expands the settings panel and prompts the user.
+ */
+async function handleTryAI() {
+    if (!getApiKey()) {
+        openSettings();
+        setApiKeyStatus('Enter your Claude API key above, then click "Try AI Parsing" again.');
+        return;
+    }
+
+    if (!_lastFile || _lastContent === null) {
+        showStatus('Please upload a file first.');
+        return;
+    }
+
+    hideAISuggestion();
+    showStatus('AI parsing in progress…');
+
+    try {
+        const newObservations = await parseLLM(_lastContent, _lastFile);
+        if (newObservations.length === 0) {
+            showStatus('AI found no observations in this document.');
+            return;
+        }
+        _saveAndRefresh(newObservations);
+        showStatus(`AI extracted ${newObservations.length} observation(s).`);
+    } catch (err) {
+        showStatus(`AI parsing failed: ${err.message}`);
+        // Re-show the suggestion so the user can fix the key and retry
+        showAISuggestion('AI parsing encountered an error. Check your API key in AI Settings.');
+    }
+}
+
+function showAISuggestion(message) {
+    document.getElementById('ai-suggestion-msg').textContent = message;
+    document.getElementById('ai-suggestion').classList.remove('hidden');
+}
+
+function hideAISuggestion() {
+    document.getElementById('ai-suggestion').classList.add('hidden');
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+function toggleSettings() {
+    const body = document.getElementById('settings-body');
+    const indicator = document.querySelector('.toggle-indicator');
+    const isHidden = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !isHidden);
+    indicator.classList.toggle('open', isHidden);
+}
+
+function openSettings() {
+    const body = document.getElementById('settings-body');
+    const indicator = document.querySelector('.toggle-indicator');
+    body.classList.remove('hidden');
+    indicator.classList.add('open');
+}
+
+function handleSaveApiKey() {
+    const input = document.getElementById('api-key-input');
+    const key = input.value.trim();
+    if (!key) {
+        setApiKeyStatus('Please enter a key first.');
+        return;
+    }
+    setApiKey(key);
+    setApiKeyStatus('Key saved.');
+}
+
+function handleClearApiKey() {
+    clearApiKey();
+    document.getElementById('api-key-input').value = '';
+    setApiKeyStatus('Key cleared.');
+}
+
+function setApiKeyStatus(msg) {
+    document.getElementById('api-key-status').textContent = msg;
+}
+
+// ─── Data management ──────────────────────────────────────────────────────────
+
+function _saveAndRefresh(newObservations) {
+    allObservations = [...allObservations, ...newObservations];
+    saveRecords(allObservations);
+    allObservations = loadRecords();   // deduplication happens in loadRecords/saveRecords
+    filteredObservations = [...allObservations];
+    displayObservations(filteredObservations);
+    updateFilters();
+    renderCharts(filteredObservations);
+}
+
+// ─── Display ──────────────────────────────────────────────────────────────────
 
 /**
  * Display observations in a table
@@ -112,7 +228,6 @@ export function displayObservations(observations) {
     html += '</tr></thead><tbody>';
 
     observations.forEach(obs => {
-        // Extract panel and marker with fallbacks
         let panel = '';
         let marker = '';
         if (obs.code && obs.code.text) {
@@ -142,32 +257,18 @@ export function displayObservations(observations) {
     container.innerHTML = html;
 }
 
+// ─── Filters ──────────────────────────────────────────────────────────────────
+
 /**
- * Clear all filter selections
+ * Update filter options
  */
-function clearFilters() {
-    // Clear panel selection
-    document.getElementById('panel-filter').value = '';
-    
-    // Clear marker selections
-    updateSelectedMarkersDisplay([]);
-    updateMarkerOptionsHighlight();
-    
-    // Clear date filters
-    document.getElementById('date-from').value = '';
-    document.getElementById('date-to').value = '';
-    
-    // Close marker dropdown
-    document.getElementById('marker-dropdown').style.display = 'none';
-    document.getElementById('marker-search').value = '';
-}
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
+    const markerSelect = document.getElementById('marker-filter');
 
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
-            const parts = obs.code.text.split(' - ');
-            return parts.length > 1 ? parts[0] : mapMarkerToPanel(obs.code.text);
+            return obs.code.text.split(' - ')[0];
         }
         return '';
     }))].filter(Boolean).sort();
@@ -175,7 +276,7 @@ function updateFilters() {
     const markers = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
             const parts = obs.code.text.split(' - ');
-            return parts.length > 1 ? parts[1] : obs.code.text;
+            return parts[1] || '';
         } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
             return obs.code.coding[0].display || '';
         }
@@ -187,171 +288,9 @@ function updateFilters() {
         panelSelect.innerHTML += `<option value="${panel}">${panel}</option>`;
     });
 
-    updateMarkerOptions(markers);
-}
-
-/**
- * Update marker options in the chip dropdown
- */
-function updateMarkerOptions(markers) {
-    const markerOptions = document.getElementById('marker-options');
-    markerOptions.innerHTML = '';
-
+    markerSelect.innerHTML = '';
     markers.forEach(marker => {
-        const option = document.createElement('div');
-        option.className = 'marker-option';
-        option.textContent = marker;
-        option.dataset.marker = marker;
-        option.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleMarker(marker);
-        });
-        markerOptions.appendChild(option);
-    });
-}
-
-/**
- * Toggle marker selection (add/remove chip)
- */
-function toggleMarker(marker) {
-    const selectedMarkers = getSelectedMarkers();
-    const index = selectedMarkers.indexOf(marker);
-
-    if (index > -1) {
-        selectedMarkers.splice(index, 1);
-    } else {
-        selectedMarkers.push(marker);
-    }
-
-    // Store current scroll position
-    const markerOptions = document.getElementById('marker-options');
-    const scrollTop = markerOptions.scrollTop;
-
-    updateSelectedMarkersDisplay(selectedMarkers);
-    updateMarkerOptionsHighlight();
-
-    // Keep dropdown open and maintain current search filter
-    const dropdown = document.getElementById('marker-dropdown');
-    const searchInput = document.getElementById('marker-search');
-    dropdown.style.display = 'block';
-    filterMarkerOptions(searchInput.value);
-    
-    // Restore scroll position
-    markerOptions.scrollTop = scrollTop;
-    
-    // Keep focus on search input
-    searchInput.focus();
-}
-
-/**
- * Get currently selected markers from chips
- */
-function getSelectedMarkers() {
-    const chips = document.querySelectorAll('.marker-chip');
-    return Array.from(chips).map(chip => chip.dataset.marker);
-}
-
-/**
- * Update the display of selected marker chips
- */
-function updateSelectedMarkersDisplay(selectedMarkers) {
-    const selectedMarkersDiv = document.getElementById('selected-markers');
-    selectedMarkersDiv.innerHTML = '';
-
-    selectedMarkers.forEach(marker => {
-        const chip = document.createElement('span');
-        chip.className = 'marker-chip';
-        chip.dataset.marker = marker;
-        chip.innerHTML = `${marker}<span class="remove-chip" onclick="removeMarker('${marker}')">×</span>`;
-        selectedMarkersDiv.appendChild(chip);
-    });
-}
-
-/**
- * Remove a specific marker chip (global function for HTML onclick)
- */
-window.removeMarker = function(marker) {
-    const selectedMarkers = getSelectedMarkers().filter(m => m !== marker);
-    
-    // Store current scroll position
-    const markerOptions = document.getElementById('marker-options');
-    const scrollTop = markerOptions.scrollTop;
-    
-    updateSelectedMarkersDisplay(selectedMarkers);
-    updateMarkerOptionsHighlight();
-
-    const dropdown = document.getElementById('marker-dropdown');
-    const searchInput = document.getElementById('marker-search');
-    dropdown.style.display = 'block';
-    filterMarkerOptions(searchInput.value);
-    
-    // Restore scroll position
-    markerOptions.scrollTop = scrollTop;
-};
-
-/**
- * Update highlighting of selected markers in dropdown
- */
-function updateMarkerOptionsHighlight() {
-    const selectedMarkers = getSelectedMarkers();
-    const options = document.querySelectorAll('.marker-option');
-
-    options.forEach(option => {
-        if (selectedMarkers.includes(option.dataset.marker)) {
-            option.classList.add('selected');
-        } else {
-            option.classList.remove('selected');
-        }
-    });
-}
-
-/**
- * Set up the marker search/dropdown behaviour
- */
-function setupMarkerDropdown() {
-    const searchInput = document.getElementById('marker-search');
-    const dropdown = document.getElementById('marker-dropdown');
-    let hideTimeout;
-
-    searchInput.addEventListener('focus', () => {
-        clearTimeout(hideTimeout);
-        dropdown.style.display = 'block';
-        filterMarkerOptions('');
-    });
-
-    searchInput.addEventListener('blur', () => {
-        hideTimeout = setTimeout(() => { 
-            dropdown.style.display = 'none';
-            searchInput.value = '';
-        }, 200);
-    });
-
-    searchInput.addEventListener('input', (e) => {
-        filterMarkerOptions(e.target.value);
-    });
-
-    // Prevent hiding when clicking on dropdown
-    dropdown.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        clearTimeout(hideTimeout);
-    });
-
-    dropdown.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-    });
-}
-
-/**
- * Filter marker options based on search text
- */
-function filterMarkerOptions(searchText) {
-    const options = document.querySelectorAll('.marker-option');
-    const searchLower = searchText.toLowerCase();
-
-    options.forEach(option => {
-        option.style.display = option.dataset.marker.toLowerCase().includes(searchLower) ? 'block' : 'none';
+        markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
     });
 }
 
@@ -362,7 +301,8 @@ function applyFilters() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     const panel = document.getElementById('panel-filter').value;
-    const selectedMarkers = getSelectedMarkers();
+    const markerSelect = document.getElementById('marker-filter');
+    const selectedMarkers = Array.from(markerSelect.selectedOptions).map(o => o.value);
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
@@ -379,17 +319,16 @@ function applyFilters() {
 
         if (dateFrom && obsDate < dateFrom) return false;
         if (dateTo && obsDate > dateTo) return false;
-        // Markers take priority: if any are selected, ignore the panel filter
-        if (selectedMarkers.length > 0) {
-            return selectedMarkers.includes(obsMarker);
-        }
         if (panel && obsPanel !== panel) return false;
+        if (selectedMarkers.length > 0 && !selectedMarkers.includes(obsMarker)) return false;
         return true;
     });
 
     displayObservations(filteredObservations);
     renderCharts(filteredObservations);
 }
+
+// ─── Status ───────────────────────────────────────────────────────────────────
 
 /**
  * Show status message

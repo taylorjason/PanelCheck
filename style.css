@@ -1,166 +1,221 @@
+/* ── Reset / base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f5f5f5;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #f5f5f5;
 }
 
 header {
-    text-align: center;
-    margin-bottom: 20px;
+    background: #2c5f8a;
+    color: #fff;
+    padding: 1rem 1.5rem;
 }
+
+header h1 { font-size: 1.4rem; }
 
 main {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 960px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
+/* ── Sections ─────────────────────────────────────────────────── */
 section {
-    background: white;
-    padding: 20px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
 }
 
-h2 {
-    margin-top: 0;
-    color: #333;
+section h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.85rem;
+    color: #2c5f8a;
 }
 
-input, select, button {
-    padding: 8px;
-    margin: 5px;
+/* ── Upload section ───────────────────────────────────────────── */
+#upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+#upload-section input[type="file"] { cursor: pointer; }
+
+#upload-status {
+    font-size: 0.9rem;
+    color: #555;
+    min-height: 1.2em;
+}
+
+/* ── AI suggestion banner ─────────────────────────────────────── */
+.ai-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #eef5fd;
+    border: 1px solid #aac8e8;
+    border-radius: 5px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    color: #1a4a72;
+}
+
+.ai-suggestion p { flex: 1; }
+
+/* ── Settings section ─────────────────────────────────────────── */
+#settings-section { padding: 0; }
+
+.settings-toggle {
+    cursor: pointer;
+    user-select: none;
+    padding: 0.9rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.05rem;
+    color: #2c5f8a;
+    border-radius: 6px;
+}
+
+.settings-toggle:hover { background: #f0f4f8; }
+
+.toggle-indicator {
+    font-size: 0.75rem;
+    transition: transform 0.15s;
+}
+
+.toggle-indicator.open { transform: rotate(90deg); }
+
+.settings-body {
+    padding: 0 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    border-top: 1px solid #eee;
+}
+
+.settings-warning {
+    font-size: 0.82rem;
+    color: #8a6000;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 4px;
+    padding: 0.45rem 0.7rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.settings-row label { font-size: 0.9rem; white-space: nowrap; }
+
+.settings-row input[type="password"] {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.35rem 0.6rem;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: monospace;
 }
 
+#api-key-status {
+    font-size: 0.85rem;
+    color: #2e7d32;
+    min-height: 1.2em;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
 button {
-    background: #007bff;
-    color: white;
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 0.9rem;
+    background: #2c5f8a;
+    color: #fff;
 }
 
-#clear-filters-btn {
-    background: #6c757d;
+button:hover { background: #1e4469; }
+
+#clear-api-key-btn {
+    background: #666;
 }
 
-#clear-filters-btn:hover {
-    background: #5a6268;
+#clear-api-key-btn:hover { background: #444; }
+
+#try-ai-btn {
+    white-space: nowrap;
+    background: #1565c0;
 }
 
-button:hover {
-    background: #0056b3;
+#try-ai-btn:hover { background: #0d47a1; }
+
+/* ── Filters section ──────────────────────────────────────────── */
+#filters-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
+
+#filters-section > div {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+#filters-section label { font-size: 0.9rem; }
+
+#filters-section input[type="date"],
+#filters-section select {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.filter-hint {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* ── Data table ───────────────────────────────────────────────── */
+#records-table { overflow-x: auto; }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.88rem;
 }
 
 th, td {
-    padding: 8px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    padding: 0.45rem 0.65rem;
+    border-bottom: 1px solid #e8e8e8;
 }
 
 th {
-    background-color: #f8f9fa;
+    background: #f0f4f8;
+    font-weight: 600;
+    color: #333;
 }
 
-#upload-status {
-    margin-top: 10px;
-    font-weight: bold;
-}
+tr:hover { background: #fafafa; }
 
-#trend-chart {
-    max-width: 100%;
-    height: 400px;
-}
+/* ── Charts section ───────────────────────────────────────────── */
+#trend-chart { max-height: 360px; }
 
-/* Marker Selector Styles */
-#marker-selector {
-    display: inline-block;
-    vertical-align: top;
-    margin-left: 10px;
-    min-width: 300px;
-}
-
-.marker-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 10px;
-    min-height: 30px;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #f8f9fa;
-}
-
-.marker-chip {
-    display: inline-flex;
-    align-items: center;
-    background: #007bff;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    margin: 2px;
-}
-
-.marker-chip .remove-chip {
-    margin-left: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    color: #ffcccc;
-}
-
-.marker-chip .remove-chip:hover {
-    color: white;
-}
-
-.marker-dropdown-container {
-    position: relative;
-}
-
-.marker-search {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-.marker-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-}
-
-.marker-options {
-    padding: 5px;
-}
-
-.marker-option {
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 3px;
-}
-
-.marker-option:hover {
-    background: #f0f0f0;
-}
-
-.marker-option.selected {
-    background: #e3f2fd;
-    color: #1976d2;
-}
+/* ── Utility ──────────────────────────────────────────────────── */
+.hidden { display: none !important; }

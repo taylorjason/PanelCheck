@@ -6,11 +6,13 @@
     <title>Bloodwork Visualizer</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
     <script>
         // Point PDF.js worker to CDN so it can parse PDFs off the main thread
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+        }
     </script>
 </head>
 <body>
@@ -21,9 +23,27 @@
     <main>
         <section id="upload-section">
             <h2>Upload Bloodwork Data</h2>
-            <input type="file" id="file-input" accept=".csv,.json,.pdf">
+            <input type="file" id="file-input" accept=".csv,.json,.pdf,.txt,.xml">
             <button id="upload-btn">Upload</button>
             <div id="upload-status"></div>
+            <div id="ai-suggestion" class="ai-suggestion hidden">
+                <p id="ai-suggestion-msg"></p>
+                <button id="try-ai-btn">Try AI Parsing</button>
+            </div>
+        </section>
+
+        <section id="settings-section">
+            <h2 id="settings-toggle" class="settings-toggle">AI Settings <span class="toggle-indicator">▸</span></h2>
+            <div id="settings-body" class="settings-body hidden">
+                <p class="settings-warning">Your API key is stored in browser localStorage (plaintext). Do not use on shared or public computers.</p>
+                <div class="settings-row">
+                    <label for="api-key-input">Claude API Key:</label>
+                    <input type="password" id="api-key-input" placeholder="sk-ant-...">
+                    <button id="save-api-key-btn">Save</button>
+                    <button id="clear-api-key-btn">Clear</button>
+                </div>
+                <p id="api-key-status"></p>
+            </div>
         </section>
 
         <section id="filters-section">
@@ -39,19 +59,12 @@
                 <select id="panel-filter">
                     <option value="">All</option>
                 </select>
-                <label for="marker-filter">Markers:</label>
-                <div id="marker-selector">
-                    <div id="selected-markers" class="marker-chips"></div>
-                    <div class="marker-dropdown-container">
-                        <input type="text" id="marker-search" placeholder="Search markers..." class="marker-search">
-                        <div id="marker-dropdown" class="marker-dropdown">
-                            <div id="marker-options" class="marker-options"></div>
-                        </div>
-                    </div>
-                </div>
+                <label for="marker-filter">Markers (select multiple):</label>
+                <select id="marker-filter" multiple size="6">
+                </select>
+                <p class="filter-hint">Hold Ctrl/Cmd to select multiple</p>
             </div>
             <button id="apply-filters-btn">Apply Filters</button>
-            <button id="clear-filters-btn">Clear Selections</button>
         </section>
 
         <section id="data-section">

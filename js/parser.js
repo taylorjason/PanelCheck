@@ -187,21 +187,7 @@ registerAdapter({
  * @returns {Promise<Object[]>} Promise resolving to FHIR Observation resources
  */
 export async function parsePDF(buffer) {
-    if (typeof pdfjsLib === 'undefined') {
-        throw new Error('PDF.js is not loaded');
-    }
-
-    const loadingTask = pdfjsLib.getDocument({ data: buffer });
-    const pdf = await loadingTask.promise;
-
-    let fullText = '';
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
-    }
-
+    const fullText = await extractTextFromPDF(buffer);
     return extractObservationsFromText(fullText);
 }
 
@@ -411,9 +397,30 @@ export function mapMarkerToPanel(marker) {
 }
 
 /**
+ * Extract raw text from a PDF ArrayBuffer using PDF.js.
+ * Used by the LLM adapter to get text before sending to the API.
+ * @param {ArrayBuffer} buffer
+ * @returns {Promise<string>}
+ */
+export async function extractTextFromPDF(buffer) {
+    if (typeof pdfjsLib === 'undefined') {
+        throw new Error('PDF.js is not loaded');
+    }
+    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+    }
+    return fullText;
+}
+
+/**
  * Convert a flat record (canonical CSV columns) to a FHIR Observation.
  */
-function flatToObservation(record) {
+export function flatToObservation(record) {
     const loinc = lookupLOINC(record.marker);
     return buildObservation({
         id: record.id || generateId(),
