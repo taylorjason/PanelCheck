@@ -55,6 +55,34 @@ export function parseCSV(csv) {
 }
 
 /**
+ * Parse JSON string into bloodwork records
+ * @param {string} json - JSON string array of records
+ * @returns {Array} Array of normalized bloodwork records
+ */
+export function parseJSON(json) {
+    try {
+        const data = JSON.parse(json);
+        if (!Array.isArray(data)) {
+            throw new Error('JSON must be an array of records');
+        }
+
+        return data.map(record => {
+            // Ensure id exists, generate if not
+            if (!record.id) {
+                record.id = generateId();
+            }
+            // Validate required fields
+            if (!record.date || !record.panel || !record.marker || typeof record.value !== 'number') {
+                throw new Error('Invalid record structure');
+            }
+            return record;
+        });
+    } catch (error) {
+        throw new Error(`JSON parsing error: ${error.message}`);
+    }
+}
+
+/**
  * Generate a unique ID for a record
  * @returns {string} Unique ID
  */

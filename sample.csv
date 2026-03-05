@@ -1,0 +1,7 @@
+date,panel,marker,value,unit,referenceMin,referenceMax,status,source
+2023-01-01,Lipid Panel,Cholesterol,200,mg/dL,0,200,high,sample
+2023-02-01,Lipid Panel,Cholesterol,190,mg/dL,0,200,normal,sample
+2023-03-01,Lipid Panel,Cholesterol,210,mg/dL,0,200,high,sample
+2023-01-01,Complete Blood Count,White Blood Cells,7.5,10^9/L,4,11,normal,sample
+2023-02-01,Complete Blood Count,White Blood Cells,8.0,10^9/L,4,11,normal,sample
+2023-03-01,Complete Blood Count,White Blood Cells,6.5,10^9/L,4,11,normal,sample
