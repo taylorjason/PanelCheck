@@ -48,13 +48,18 @@ export function renderCharts(observations) {
             responsive: true,
             scales: {
                 x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day'
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Date'
                     }
                 },
                 y: {
-                    beginAtZero: false
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Value'
+                    }
                 }
             }
         }
