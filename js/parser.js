@@ -176,17 +176,25 @@ function parseFHIRBundle(bundle) {
  * @returns {string} Panel name
  */
 export function mapMarkerToPanel(marker) {
+    const markerLower = marker.toLowerCase();
+    
+    // Lipid Panel - catch HDL, LDL, and anything starting with Chol
+    if (markerLower.includes('hdl') || markerLower.includes('ldl') || markerLower.startsWith('chol')) {
+        return 'Lipid Panel';
+    }
+    
+    // Kidney Function - add eGFR
+    if (markerLower.includes('egfr')) {
+        return 'Kidney Function';
+    }
+    
     const panelMappings = {
         // Lipid Panel
-        'LDL': 'Lipid Panel',
-        'HDL': 'Lipid Panel',
-        'Cholesterol Total': 'Lipid Panel',
         'Triglycerides': 'Lipid Panel',
         
         // Metabolic Panel / Electrolytes
         'Glucose Lvl': 'Metabolic Panel',
         'Glucose': 'Metabolic Panel',
-        'BUN': 'Metabolic Panel',
         'Sodium': 'Metabolic Panel',
         'Potassium Lvl': 'Metabolic Panel',
         'Chloride': 'Metabolic Panel',
@@ -207,7 +215,6 @@ export function mapMarkerToPanel(marker) {
         'Creatinine Level': 'Kidney Function',
         'Creatinine': 'Kidney Function',
         'BUN/Creat Ratio': 'Kidney Function',
-        'eGFR': 'Kidney Function',
         
         // Glucose Control
         'Hemoglobin A1c': 'Glucose Control',
