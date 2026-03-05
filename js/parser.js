@@ -118,6 +118,7 @@ function parseFHIRBundle(bundle) {
     }
 
     const observations = [];
+    const seenIds = new Set();
 
     for (const entry of bundle.entry) {
         const resource = entry.resource;
@@ -128,7 +129,13 @@ function parseFHIRBundle(bundle) {
         // Ensure it has required fields
         if (!resource.id) {
             resource.id = generateId();
+        } else if (seenIds.has(resource.id)) {
+            // Duplicate ID found - generate a new unique one
+            console.warn('Duplicate ID detected:', resource.id, '- generating new ID');
+            resource.id = generateId();
         }
+        seenIds.add(resource.id);
+
         if (resource.status !== 'final' && resource.status !== 'amended') {
             continue; // Skip non-final observations
         }
