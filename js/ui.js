@@ -305,18 +305,32 @@ function updateMarkerOptionsHighlight() {
 function setupMarkerDropdown() {
     const searchInput = document.getElementById('marker-search');
     const dropdown = document.getElementById('marker-dropdown');
+    let hideTimeout;
 
     searchInput.addEventListener('focus', () => {
+        clearTimeout(hideTimeout);
         dropdown.style.display = 'block';
         filterMarkerOptions('');
     });
 
     searchInput.addEventListener('blur', () => {
-        setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+        hideTimeout = setTimeout(() => { dropdown.style.display = 'none'; }, 150);
     });
 
     searchInput.addEventListener('input', (e) => {
         filterMarkerOptions(e.target.value);
+    });
+
+    // Prevent hiding when clicking on dropdown or chips
+    dropdown.addEventListener('mousedown', () => {
+        clearTimeout(hideTimeout);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target) && 
+            !e.target.classList.contains('marker-chip') && !e.target.classList.contains('remove-chip')) {
+            dropdown.style.display = 'none';
+        }
     });
 }
 
