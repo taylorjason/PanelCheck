@@ -12,6 +12,7 @@
  *   parseFile(file, content) → Observation[]
  *   parseCSV(csv)            → Observation[]  (kept for tests / direct use)
  *   parseJSON(json)          → Observation[]  (kept for tests / direct use)
+ *   mapMarkerToPanel(marker) → string
  */
 
 import { lookupLOINC } from './loinc-map.js';
@@ -26,7 +27,7 @@ function registerAdapter(adapter) {
 
 /**
  * Dispatch a file to the first adapter that claims it.
- * @param {File}             file    - the File object from the input element
+ * @param {File}               file    - the File object from the input element
  * @param {string|ArrayBuffer} content - pre-read file content
  * @returns {Object[]} Array of FHIR Observation resources
  */
@@ -139,9 +140,8 @@ function parseFHIRBundle(bundle) {
     for (const entry of bundle.entry) {
         const resource = entry.resource;
         if (resource.resourceType !== 'Observation') continue;
-        if (resource.status !== 'final' && resource.status !== 'amended') continue;
-        if (!resource.effectiveDateTime || !resource.valueQuantity || !resource.code) continue;
 
+        // Ensure unique ID
         if (!resource.id) {
             resource.id = generateId();
         } else if (seenIds.has(resource.id)) {
@@ -149,6 +149,20 @@ function parseFHIRBundle(bundle) {
             resource.id = generateId();
         }
         seenIds.add(resource.id);
+
+        if (resource.status !== 'final' && resource.status !== 'amended') continue;
+        if (!resource.effectiveDateTime || !resource.valueQuantity || !resource.code) continue;
+
+        // Extract marker name and assign a logical panel
+        let marker = '';
+        if (resource.code.text) {
+            marker = resource.code.text;
+        } else if (resource.code.coding && resource.code.coding[0]) {
+            marker = resource.code.coding[0].display || '';
+        }
+        const panel = mapMarkerToPanel(marker);
+        resource.code.text = `${panel} - ${marker}`;
+
         observations.push(resource);
     }
 
@@ -226,7 +240,7 @@ export function extractObservationsFromText(text) {
         observations.push(buildObservation({
             id: generateId(),
             date,
-            panel: result.panel || inferPanel(result.marker),
+            panel: result.panel || mapMarkerToPanel(result.marker),
             marker: loinc.display,
             loincCode: loinc.code,
             value: result.value,
@@ -249,13 +263,10 @@ export function extractObservationsFromText(text) {
  *   1. "MarkerName  123.4  unit  (refMin-refMax)"
  *   2. "MarkerName  123.4  unit  refMin-refMax"
  *   3. "MarkerName: 123.4 unit"
- *   4. Lines with explicit "H" / "L" / "N" flags
  */
 function parseLabLine(line) {
-    // Strip common non-data characters but keep hyphen (used in ranges) and period
     const normalized = line.replace(/[*†‡]/g, '').trim();
 
-    // Regex: marker name, numeric value, optional unit, optional ref range
     // Handles: "Glucose  95  mg/dL  70-99" or "Glucose  95  mg/dL  (70-99)"
     const MAIN = /^([A-Za-z][A-Za-z0-9 /()%._-]{1,50?}?)\s{2,}(\d+\.?\d*)\s+([\w/%]+)\s+\(?([\d.]+)[-–]([\d.]+)\)?/;
     let m = normalized.match(MAIN);
@@ -299,22 +310,19 @@ function parseLabLine(line) {
 }
 
 /**
- * Extract the most likely date from the text of a PDF.
- * Looks for patterns like "Date: 01/15/2024", "Collected: 2024-01-15", etc.
+ * Extract the most likely collection date from PDF text.
+ * Looks for ISO, US (MM/DD/YYYY), and written (Jan 15, 2024) formats.
  */
 function extractDateFromText(text) {
-    // ISO: 2024-01-15
     let m = text.match(/\b(\d{4}-\d{2}-\d{2})\b/);
     if (m) return m[1];
 
-    // US: 01/15/2024
     m = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
     if (m) {
         const [, month, day, year] = m;
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
-    // Written: Jan 15, 2024 / January 15, 2024
     const MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6,
                      jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
     m = text.match(/\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})\b/);
@@ -328,48 +336,79 @@ function extractDateFromText(text) {
     return null;
 }
 
+// ─── Shared helpers ──────────────────────────────────────────────────────────
+
 /**
- * Infer the panel name from a marker name using a simple lookup.
+ * Map a marker name to a logical panel name.
+ * Used by FHIR bundle parsing, CSV/JSON ingestion, and PDF extraction.
+ * @param {string} marker
+ * @returns {string} Panel name
  */
-function inferPanel(marker) {
+export function mapMarkerToPanel(marker) {
     const lower = marker.toLowerCase();
-    if (['wbc','rbc','hemoglobin','hgb','hematocrit','hct','mcv','mch','mchc','platelets','plt','rdw',
-         'neutrophils','lymphocytes','monocytes','eosinophils','basophils'].some(k => lower.includes(k))) {
-        return 'CBC';
-    }
-    if (['glucose','bun','creatinine','egfr','sodium','potassium','chloride','co2','calcium',
-         'protein','albumin','bilirubin','alt','ast','alkaline phosphatase'].some(k => lower.includes(k))) {
-        return 'CMP';
-    }
-    if (['cholesterol','triglyceride','hdl','ldl','vldl'].some(k => lower.includes(k))) {
+
+    // Lipid Panel
+    if (lower.includes('hdl') || lower.includes('ldl') || lower.startsWith('chol') ||
+        lower.includes('cholesterol') || lower.includes('triglyceride') || lower.includes('vldl')) {
         return 'Lipid Panel';
     }
-    if (['tsh','t4','t3','thyroxine','thyrotropin'].some(k => lower.includes(k))) {
+
+    // CBC
+    if (['wbc', 'rbc', 'hemoglobin', 'hgb', 'hematocrit', 'hct', 'mcv', 'mch', 'mchc',
+         'platelets', 'plt', 'rdw', 'neutrophils', 'lymphocytes', 'monocytes',
+         'eosinophils', 'basophils'].some(k => lower.includes(k))) {
+        return 'CBC';
+    }
+
+    // Kidney Function
+    if (lower.includes('egfr') || lower.includes('creatinine') || lower.includes('bun') ||
+        lower.includes('urea nitrogen') || lower.includes('bun/creat')) {
+        return 'Kidney Function';
+    }
+
+    // Liver Function
+    if (lower.includes('alt') || lower.includes('ast') || lower.includes('bilirubin') ||
+        lower.includes('alk phos') || lower.includes('alkaline phosphatase') || lower.includes('ggt')) {
+        return 'Liver Function';
+    }
+
+    // Metabolic Panel / Electrolytes
+    if (['glucose', 'sodium', 'potassium', 'chloride', 'co2', 'bicarbonate', 'calcium',
+         'albumin', 'protein', 'agap', 'anion gap'].some(k => lower.includes(k))) {
+        return 'Metabolic Panel';
+    }
+
+    // Thyroid
+    if (['tsh', 'thyrotropin', 'thyroxine', 't3', 't4', 'free t'].some(k => lower.includes(k))) {
         return 'Thyroid';
     }
-    if (['hba1c','a1c','insulin'].some(k => lower.includes(k))) {
-        return 'Diabetes';
+
+    // Glucose Control / Diabetes
+    if (lower.includes('hba1c') || lower.includes('hemoglobin a1c') || lower.includes('a1c') ||
+        lower.includes('insulin') || lower.includes('avg glucose')) {
+        return 'Glucose Control';
     }
-    if (['vitamin','ferritin','iron','folate','b12','magnesium','zinc','phosphorus'].some(k => lower.includes(k))) {
+
+    // Vitamins & Minerals
+    if (['vitamin', 'ferritin', 'iron', 'folate', 'b12', 'cobalamin', 'magnesium',
+         'zinc', 'phosphorus', 'tibc'].some(k => lower.includes(k))) {
         return 'Vitamins & Minerals';
     }
-    if (['testosterone','estradiol','progesterone','cortisol','dhea','shbg','lh','fsh','prolactin'].some(k => lower.includes(k))) {
+
+    // Hormones
+    if (['testosterone', 'estradiol', 'progesterone', 'cortisol', 'dhea',
+         'shbg', ' lh', 'fsh', 'prolactin'].some(k => lower.includes(k))) {
         return 'Hormones';
     }
-    return 'General';
-}
 
-/**
- * Derive interpretation status from value and reference range.
- */
-function deriveStatus(value, refMin, refMax) {
-    if (refMin === null && refMax === null) return 'unknown';
-    if (refMax !== null && value > refMax) return 'high';
-    if (refMin !== null && value < refMin) return 'low';
-    return 'normal';
-}
+    // Inflammation / Cardiac Risk
+    if (lower.includes('crp') || lower.includes('homocysteine') || lower.includes('esr') ||
+        lower.includes('uric acid')) {
+        return 'Inflammation';
+    }
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
+    return 'Other';
+}
 
 /**
  * Convert a flat record (canonical CSV columns) to a FHIR Observation.
@@ -446,6 +485,16 @@ function buildObservation({ id, date, panel, marker, loincCode, value, unit, ref
     }
 
     return obs;
+}
+
+/**
+ * Derive interpretation status from value and reference range.
+ */
+function deriveStatus(value, refMin, refMax) {
+    if (refMin === null && refMax === null) return 'unknown';
+    if (refMax !== null && value > refMax) return 'high';
+    if (refMin !== null && value < refMin) return 'low';
+    return 'normal';
 }
 
 let idCounter = 0;

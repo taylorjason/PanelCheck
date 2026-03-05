@@ -23,6 +23,7 @@ QUnit.test('parseCSV parses valid CSV', function(assert) {
     assert.equal(firstObs.effectiveDateTime, '2023-01-01', 'Sets effectiveDateTime');
     assert.equal(firstObs.valueQuantity.value, 200, 'Sets value');
     assert.equal(firstObs.valueQuantity.unit, 'mg/dL', 'Sets unit');
+    assert.equal(firstObs.code.text, 'Lipid Panel - Total Cholesterol', 'Sets code text with canonical LOINC display name');
     assert.equal(firstObs.interpretation[0].coding[0].code, 'H', 'Sets interpretation');
 });
 

@@ -2,9 +2,11 @@ import { saveRecords, loadRecords, clearRecords } from '../js/storage.js';
 
 QUnit.module('Storage Module', {
     beforeEach: function() {
+        // Clear localStorage before each test
         localStorage.clear();
     },
     afterEach: function() {
+        // Clean up after each test
         localStorage.clear();
     }
 });
@@ -53,7 +55,21 @@ QUnit.test('loadRecords returns stored observations', function(assert) {
 });
 
 QUnit.test('clearRecords removes all observations', function(assert) {
-    localStorage.setItem('bloodwork_observations', JSON.stringify([{ id: '1' }]));
+    const observations = [
+        {
+            resourceType: 'Observation',
+            id: '1',
+            status: 'final',
+            effectiveDateTime: '2023-01-01',
+            code: { text: 'Lipid Panel - Cholesterol' },
+            valueQuantity: { value: 200, unit: 'mg/dL' },
+            interpretation: [{ coding: [{ code: 'H' }] }]
+        }
+    ];
+
+    localStorage.setItem('bloodwork_observations', JSON.stringify(observations));
     clearRecords();
-    assert.equal(localStorage.getItem('bloodwork_observations'), null, 'Observations are cleared from localStorage');
+
+    const stored = localStorage.getItem('bloodwork_observations');
+    assert.equal(stored, null, 'Observations are cleared from localStorage');
 });

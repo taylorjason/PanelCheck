@@ -1,5 +1,5 @@
 import { loadRecords, saveRecords } from './storage.js';
-import { parseFile } from './parser.js';
+import { parseFile, mapMarkerToPanel } from './parser.js';
 import { renderCharts } from './charts.js';
 
 let allObservations = [];
@@ -11,9 +11,13 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    setupMarkerDropdown();
 
-    // Load existing observations
+    // Load existing observations and re-process to apply updated panel mappings
     allObservations = loadRecords();
+    allObservations = reprocessObservations(allObservations);
+    saveRecords(allObservations);
+
     filteredObservations = [...allObservations];
     displayObservations(filteredObservations);
     updateFilters();
@@ -49,7 +53,9 @@ function handleFileUpload() {
             allObservations = [...allObservations, ...newObservations];
             console.log('Parsed observations:', newObservations.length);
             console.log('Total observations before dedup:', allObservations.length);
+            // Deduplication happens in saveRecords via storage.js
             saveRecords(allObservations);
+            // Reload from storage to get deduplicated list
             allObservations = loadRecords();
             console.log('Total observations after dedup:', allObservations.length);
             filteredObservations = [...allObservations];
@@ -70,6 +76,26 @@ function handleFileUpload() {
 }
 
 /**
+ * Re-process observations to apply updated panel mappings.
+ * Ensures any previously stored data uses the current panel names.
+ */
+function reprocessObservations(observations) {
+    return observations.map(obs => {
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            if (parts.length > 1) {
+                const marker = parts[1];
+                obs.code.text = `${mapMarkerToPanel(marker)} - ${marker}`;
+            } else {
+                const marker = obs.code.text;
+                obs.code.text = `${mapMarkerToPanel(marker)} - ${marker}`;
+            }
+        }
+        return obs;
+    });
+}
+
+/**
  * Display observations in a table
  * @param {Array} observations
  */
@@ -85,6 +111,7 @@ export function displayObservations(observations) {
     html += '</tr></thead><tbody>';
 
     observations.forEach(obs => {
+        // Extract panel and marker with fallbacks
         let panel = '';
         let marker = '';
         if (obs.code && obs.code.text) {
@@ -119,11 +146,11 @@ export function displayObservations(observations) {
  */
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
-    const markerSelect = document.getElementById('marker-filter');
 
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
-            return obs.code.text.split(' - ')[0];
+            const parts = obs.code.text.split(' - ');
+            return parts.length > 1 ? parts[0] : mapMarkerToPanel(obs.code.text);
         }
         return '';
     }))].filter(Boolean).sort();
@@ -131,7 +158,7 @@ function updateFilters() {
     const markers = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
             const parts = obs.code.text.split(' - ');
-            return parts[1] || '';
+            return parts.length > 1 ? parts[1] : obs.code.text;
         } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
             return obs.code.coding[0].display || '';
         }
@@ -143,9 +170,133 @@ function updateFilters() {
         panelSelect.innerHTML += `<option value="${panel}">${panel}</option>`;
     });
 
-    markerSelect.innerHTML = '';
+    updateMarkerOptions(markers);
+}
+
+/**
+ * Update marker options in the chip dropdown
+ */
+function updateMarkerOptions(markers) {
+    const markerOptions = document.getElementById('marker-options');
+    markerOptions.innerHTML = '';
+
     markers.forEach(marker => {
-        markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
+        const option = document.createElement('div');
+        option.className = 'marker-option';
+        option.textContent = marker;
+        option.dataset.marker = marker;
+        option.addEventListener('click', () => toggleMarker(marker));
+        markerOptions.appendChild(option);
+    });
+}
+
+/**
+ * Toggle marker selection (add/remove chip)
+ */
+function toggleMarker(marker) {
+    const selectedMarkers = getSelectedMarkers();
+    const index = selectedMarkers.indexOf(marker);
+
+    if (index > -1) {
+        selectedMarkers.splice(index, 1);
+    } else {
+        selectedMarkers.push(marker);
+    }
+
+    updateSelectedMarkersDisplay(selectedMarkers);
+    updateMarkerOptionsHighlight();
+
+    // Keep dropdown open and maintain current search filter
+    const dropdown = document.getElementById('marker-dropdown');
+    const searchInput = document.getElementById('marker-search');
+    dropdown.style.display = 'block';
+    filterMarkerOptions(searchInput.value);
+}
+
+/**
+ * Get currently selected markers from chips
+ */
+function getSelectedMarkers() {
+    const chips = document.querySelectorAll('.marker-chip');
+    return Array.from(chips).map(chip => chip.dataset.marker);
+}
+
+/**
+ * Update the display of selected marker chips
+ */
+function updateSelectedMarkersDisplay(selectedMarkers) {
+    const selectedMarkersDiv = document.getElementById('selected-markers');
+    selectedMarkersDiv.innerHTML = '';
+
+    selectedMarkers.forEach(marker => {
+        const chip = document.createElement('span');
+        chip.className = 'marker-chip';
+        chip.dataset.marker = marker;
+        chip.innerHTML = `${marker}<span class="remove-chip" onclick="removeMarker('${marker}')">×</span>`;
+        selectedMarkersDiv.appendChild(chip);
+    });
+}
+
+/**
+ * Remove a specific marker chip (global function for HTML onclick)
+ */
+window.removeMarker = function(marker) {
+    const selectedMarkers = getSelectedMarkers().filter(m => m !== marker);
+    updateSelectedMarkersDisplay(selectedMarkers);
+    updateMarkerOptionsHighlight();
+
+    const dropdown = document.getElementById('marker-dropdown');
+    const searchInput = document.getElementById('marker-search');
+    dropdown.style.display = 'block';
+    filterMarkerOptions(searchInput.value);
+};
+
+/**
+ * Update highlighting of selected markers in dropdown
+ */
+function updateMarkerOptionsHighlight() {
+    const selectedMarkers = getSelectedMarkers();
+    const options = document.querySelectorAll('.marker-option');
+
+    options.forEach(option => {
+        if (selectedMarkers.includes(option.dataset.marker)) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
+
+/**
+ * Set up the marker search/dropdown behaviour
+ */
+function setupMarkerDropdown() {
+    const searchInput = document.getElementById('marker-search');
+    const dropdown = document.getElementById('marker-dropdown');
+
+    searchInput.addEventListener('focus', () => {
+        dropdown.style.display = 'block';
+        filterMarkerOptions('');
+    });
+
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+    });
+
+    searchInput.addEventListener('input', (e) => {
+        filterMarkerOptions(e.target.value);
+    });
+}
+
+/**
+ * Filter marker options based on search text
+ */
+function filterMarkerOptions(searchText) {
+    const options = document.querySelectorAll('.marker-option');
+    const searchLower = searchText.toLowerCase();
+
+    options.forEach(option => {
+        option.style.display = option.dataset.marker.toLowerCase().includes(searchLower) ? 'block' : 'none';
     });
 }
 
@@ -156,8 +307,7 @@ function applyFilters() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     const panel = document.getElementById('panel-filter').value;
-    const markerSelect = document.getElementById('marker-filter');
-    const selectedMarkers = Array.from(markerSelect.selectedOptions).map(o => o.value);
+    const selectedMarkers = getSelectedMarkers();
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
