@@ -84,13 +84,29 @@ export function displayObservations(observations) {
     html += '</tr></thead><tbody>';
 
     observations.forEach(obs => {
+        // Extract panel and marker with fallbacks
+        let panel = '';
+        let marker = '';
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            panel = parts[0] || '';
+            marker = parts[1] || (obs.code.coding && obs.code.coding[0] && obs.code.coding[0].display) || '';
+        } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
+            marker = obs.code.coding[0].display || '';
+        }
+
+        const date = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
+        const value = obs.valueQuantity && obs.valueQuantity.value;
+        const unit = obs.valueQuantity && obs.valueQuantity.unit;
+        const status = obs.interpretation && obs.interpretation[0] && obs.interpretation[0].coding[0] && obs.interpretation[0].coding[0].code;
+
         html += `<tr>
-            <td>${obs.effectiveDateTime || obs.date}</td>
-            <td>${obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : ''}</td>
-            <td>${obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : ''}</td>
-            <td>${obs.valueQuantity && obs.valueQuantity.value}</td>
-            <td>${obs.valueQuantity && obs.valueQuantity.unit}</td>
-            <td>${obs.interpretation && obs.interpretation[0] && obs.interpretation[0].coding[0].code}</td>
+            <td>${date}</td>
+            <td>${panel}</td>
+            <td>${marker}</td>
+            <td>${value}</td>
+            <td>${unit}</td>
+            <td>${status}</td>
         </tr>`;
     });
 
@@ -106,12 +122,20 @@ function updateFilters() {
     const markerSelect = document.getElementById('marker-filter');
 
     const panels = [...new Set(allObservations.map(obs => {
-        const text = obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : '';
-        return text;
+        if (obs.code && obs.code.text) {
+            return obs.code.text.split(' - ')[0];
+        }
+        return '';
     }))].filter(Boolean).sort();
+
     const markers = [...new Set(allObservations.map(obs => {
-        const text = obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : '';
-        return text;
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            return parts[1] || '';
+        } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
+            return obs.code.coding[0].display || '';
+        }
+        return '';
     }))].filter(Boolean).sort();
 
     panelSelect.innerHTML = '<option value="">All</option>';
@@ -136,8 +160,16 @@ function applyFilters() {
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
-        const obsPanel = obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : '';
-        const obsMarker = obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : '';
+        let obsPanel = '';
+        let obsMarker = '';
+        
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            obsPanel = parts[0];
+            obsMarker = parts[1] || '';
+        } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
+            obsMarker = obs.code.coding[0].display || '';
+        }
 
         if (dateFrom && obsDate < dateFrom) return false;
         if (dateTo && obsDate > dateTo) return false;
