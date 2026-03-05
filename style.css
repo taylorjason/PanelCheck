@@ -69,3 +69,90 @@ th {
     max-width: 100%;
     height: 400px;
 }
+
+/* Marker Selector Styles */
+#marker-selector {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: 10px;
+    min-width: 300px;
+}
+
+.marker-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+    min-height: 30px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.marker-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.marker-chip .remove-chip {
+    margin-left: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #ffcccc;
+}
+
+.marker-chip .remove-chip:hover {
+    color: white;
+}
+
+.marker-dropdown-container {
+    position: relative;
+}
+
+.marker-search {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.marker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.marker-options {
+    padding: 5px;
+}
+
+.marker-option {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.marker-option:hover {
+    background: #f0f0f0;
+}
+
+.marker-option.selected {
+    background: #e3f2fd;
+    color: #1976d2;
+}

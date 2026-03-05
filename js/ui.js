@@ -11,6 +11,7 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    setupMarkerDropdown();
 
     // Load existing observations
     allObservations = loadRecords();
@@ -116,7 +117,6 @@ export function displayObservations(observations) {
  */
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
-    const markerSelect = document.getElementById('marker-filter');
 
     // Extract panels from observations
     const panels = [...new Set(allObservations.map(obs => {
@@ -155,9 +155,134 @@ function updateFilters() {
         panelSelect.innerHTML += `<option value="${panel}">${panel}</option>`;
     });
 
-    markerSelect.innerHTML = '';
+    // Update marker options for the dropdown
+    updateMarkerOptions(markers);
+}
+
+/**
+ * Update marker options in the dropdown
+ */
+function updateMarkerOptions(markers) {
+    const markerOptions = document.getElementById('marker-options');
+    markerOptions.innerHTML = '';
+    
     markers.forEach(marker => {
-        markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
+        const option = document.createElement('div');
+        option.className = 'marker-option';
+        option.textContent = marker;
+        option.dataset.marker = marker;
+        option.addEventListener('click', () => toggleMarker(marker));
+        markerOptions.appendChild(option);
+    });
+}
+
+/**
+ * Toggle marker selection (add/remove chip)
+ */
+function toggleMarker(marker) {
+    const selectedMarkers = getSelectedMarkers();
+    const index = selectedMarkers.indexOf(marker);
+    
+    if (index > -1) {
+        // Remove marker
+        selectedMarkers.splice(index, 1);
+    } else {
+        // Add marker
+        selectedMarkers.push(marker);
+    }
+    
+    updateSelectedMarkersDisplay(selectedMarkers);
+    updateMarkerOptionsHighlight();
+}
+
+/**
+ * Get currently selected markers from chips
+ */
+function getSelectedMarkers() {
+    const chips = document.querySelectorAll('.marker-chip');
+    return Array.from(chips).map(chip => chip.dataset.marker);
+}
+
+/**
+ * Update the display of selected marker chips
+ */
+function updateSelectedMarkersDisplay(selectedMarkers) {
+    const selectedMarkersDiv = document.getElementById('selected-markers');
+    selectedMarkersDiv.innerHTML = '';
+    
+    selectedMarkers.forEach(marker => {
+        const chip = document.createElement('span');
+        chip.className = 'marker-chip';
+        chip.dataset.marker = marker;
+        chip.innerHTML = `${marker}<span class="remove-chip" onclick="removeMarker('${marker}')">×</span>`;
+        selectedMarkersDiv.appendChild(chip);
+    });
+}
+
+/**
+ * Remove a specific marker chip (global function for HTML onclick)
+ */
+window.removeMarker = function(marker) {
+    const selectedMarkers = getSelectedMarkers().filter(m => m !== marker);
+    updateSelectedMarkersDisplay(selectedMarkers);
+    updateMarkerOptionsHighlight();
+};
+
+/**
+ * Update highlighting of selected markers in dropdown
+ */
+function updateMarkerOptionsHighlight() {
+    const selectedMarkers = getSelectedMarkers();
+    const options = document.querySelectorAll('.marker-option');
+    
+    options.forEach(option => {
+        const marker = option.dataset.marker;
+        if (selectedMarkers.includes(marker)) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
+
+/**
+ * Show/hide marker dropdown based on search input focus
+ */
+function setupMarkerDropdown() {
+    const searchInput = document.getElementById('marker-search');
+    const dropdown = document.getElementById('marker-dropdown');
+    
+    searchInput.addEventListener('focus', () => {
+        dropdown.style.display = 'block';
+        filterMarkerOptions('');
+    });
+    
+    searchInput.addEventListener('blur', () => {
+        // Delay hiding to allow clicks on options
+        setTimeout(() => {
+            dropdown.style.display = 'none';
+        }, 150);
+    });
+    
+    searchInput.addEventListener('input', (e) => {
+        filterMarkerOptions(e.target.value);
+    });
+}
+
+/**
+ * Filter marker options based on search text
+ */
+function filterMarkerOptions(searchText) {
+    const options = document.querySelectorAll('.marker-option');
+    const searchLower = searchText.toLowerCase();
+    
+    options.forEach(option => {
+        const marker = option.dataset.marker.toLowerCase();
+        if (marker.includes(searchLower)) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+        }
     });
 }
 
@@ -168,8 +293,7 @@ function applyFilters() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     const panel = document.getElementById('panel-filter').value;
-    const markerSelect = document.getElementById('marker-filter');
-    const selectedMarkers = Array.from(markerSelect.selectedOptions).map(o => o.value);
+    const selectedMarkers = getSelectedMarkers();
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
