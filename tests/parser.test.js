@@ -1,4 +1,4 @@
-import { parseCSV } from '../js/parser.js';
+import { parseCSV, parseJSON } from '../js/parser.js';
 
 QUnit.module('Parser Module');
 
@@ -39,4 +39,98 @@ invalid,row,with,fewer,fields
 
     // Should skip the malformed row and parse the valid ones
     assert.equal(result.length, 2, 'Skips malformed row and parses valid ones');
+});
+
+QUnit.test('parseJSON parses flat JSON array', function(assert) {
+    const json = JSON.stringify([
+        {
+            id: '1',
+            date: '2023-01-01',
+            panel: 'Lipid Panel',
+            marker: 'Cholesterol',
+            value: 200,
+            unit: 'mg/dL',
+            referenceMin: 0,
+            referenceMax: 200,
+            status: 'high',
+            source: 'test'
+        }
+    ]);
+
+    const result = parseJSON(json);
+    assert.equal(result.length, 1, 'Parses one record');
+    assert.equal(result[0].date, '2023-01-01', 'Parses date');
+});
+
+QUnit.test('parseJSON parses FHIR Bundle', function(assert) {
+    const fhirBundle = {
+        resourceType: 'Bundle',
+        type: 'collection',
+        entry: [
+            {
+                resource: {
+                    resourceType: 'Observation',
+                    id: 'chol-1',
+                    status: 'final',
+                    category: [{
+                        coding: [{
+                            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                            code: 'laboratory'
+                        }]
+                    }],
+                    code: {
+                        coding: [{
+                            system: 'http://loinc.org',
+                            code: '2093-3',
+                            display: 'Cholesterol'
+                        }],
+                        text: 'Lipid Panel - Cholesterol'
+                    },
+                    subject: { reference: 'Patient/example' },
+                    effectiveDateTime: '2023-01-01',
+                    valueQuantity: {
+                        value: 200,
+                        unit: 'mg/dL',
+                        system: 'http://unitsofmeasure.org'
+                    },
+                    referenceRange: [{
+                        low: { value: 0, unit: 'mg/dL' },
+                        high: { value: 200, unit: 'mg/dL' }
+                    }],
+                    interpretation: [{
+                        coding: [{
+                            system: 'http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation',
+                            code: 'H'
+                        }]
+                    }]
+                }
+            }
+        ]
+    };
+
+    const result = parseJSON(JSON.stringify(fhirBundle));
+    assert.equal(result.length, 1, 'Parses one observation');
+    const record = result[0];
+    assert.equal(record.date, '2023-01-01', 'Extracts date');
+    assert.equal(record.marker, 'Cholesterol', 'Extracts marker from display');
+    assert.equal(record.value, 200, 'Extracts value');
+    assert.equal(record.unit, 'mg/dL', 'Extracts unit');
+    assert.equal(record.status, 'high', 'Maps interpretation to status');
+    assert.equal(record.panel, 'Lipid Panel', 'Extracts panel from text');
+});
+
+QUnit.test('parseJSON handles invalid FHIR', function(assert) {
+    const invalidFhir = {
+        resourceType: 'Bundle',
+        entry: [
+            {
+                resource: {
+                    resourceType: 'Observation',
+                    // Missing required fields
+                }
+            }
+        ]
+    };
+
+    assert.throws(() => parseJSON(JSON.stringify(invalidFhir)), /Invalid FHIR/, 'Throws for invalid FHIR');
 });
