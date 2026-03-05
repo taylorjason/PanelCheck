@@ -11,6 +11,13 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    document.getElementById('chart-markers').addEventListener('change', (e) => {
+        // Limit to 3 selections
+        const selected = Array.from(e.target.selectedOptions);
+        if (selected.length > 3) {
+            selected[selected.length - 1].selected = false;
+        }
+    });
 
     // Load existing observations
     allObservations = loadRecords();
@@ -117,6 +124,7 @@ export function displayObservations(observations) {
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
     const markerSelect = document.getElementById('marker-filter');
+    const chartMarkerSelect = document.getElementById('chart-markers');
 
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
@@ -143,6 +151,15 @@ function updateFilters() {
     markerSelect.innerHTML = '<option value="">All</option>';
     markers.forEach(marker => {
         markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
+    });
+
+    // Populate chart markers multi-select
+    chartMarkerSelect.innerHTML = '';
+    markers.forEach(marker => {
+        const option = document.createElement('option');
+        option.value = marker;
+        option.textContent = marker;
+        chartMarkerSelect.appendChild(option);
     });
 }
 
@@ -176,7 +193,36 @@ function applyFilters() {
     });
 
     displayObservations(filteredObservations);
-    renderCharts(filteredObservations);
+    renderChartsWithSelectedMarkers(filteredObservations);
+}
+
+/**
+ * Render charts for selected markers only
+ * @param {Array} observations
+ */
+function renderChartsWithSelectedMarkers(observations) {
+    const chartMarkerSelect = document.getElementById('chart-markers');
+    const selectedMarkers = Array.from(chartMarkerSelect.selectedOptions).map(o => o.value);
+    
+    // If no markers selected, show all
+    if (selectedMarkers.length === 0) {
+        renderCharts(observations);
+        return;
+    }
+
+    // Filter observations to only selected markers
+    const filtered = observations.filter(obs => {
+        let obsMarker = '';
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            obsMarker = parts[1] || '';
+        } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
+            obsMarker = obs.code.coding[0].display || '';
+        }
+        return selectedMarkers.includes(obsMarker);
+    });
+
+    renderCharts(filtered);
 }
 
 /**
