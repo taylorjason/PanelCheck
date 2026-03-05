@@ -1,1 +1,3 @@
 *.json
+\marketing
+.DS_Store
