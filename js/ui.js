@@ -1,5 +1,5 @@
 import { loadRecords, saveRecords } from './storage.js';
-import { parseCSV, parseJSON } from './parser.js';
+import { parseCSV, parseJSON, mapMarkerToPanel } from './parser.js';
 import { renderCharts } from './charts.js';
 
 let allObservations = [];
@@ -118,17 +118,32 @@ function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
     const markerSelect = document.getElementById('marker-filter');
 
+    // Extract panels from observations
     const panels = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
-            return obs.code.text.split(' - ')[0];
+            const parts = obs.code.text.split(' - ');
+            if (parts.length > 1) {
+                // code.text is in "Panel - Marker" format
+                return parts[0];
+            } else {
+                // code.text is just the marker, map it to a panel
+                return mapMarkerToPanel(obs.code.text);
+            }
         }
         return '';
     }))].filter(Boolean).sort();
 
+    // Extract markers from observations
     const markers = [...new Set(allObservations.map(obs => {
         if (obs.code && obs.code.text) {
             const parts = obs.code.text.split(' - ');
-            return parts[1] || '';
+            if (parts.length > 1) {
+                // code.text is in "Panel - Marker" format, take the marker
+                return parts[1];
+            } else {
+                // code.text is just the marker
+                return obs.code.text;
+            }
         } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
             return obs.code.coding[0].display || '';
         }

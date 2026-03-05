@@ -175,7 +175,7 @@ function parseFHIRBundle(bundle) {
  * @param {string} marker - Marker name
  * @returns {string} Panel name
  */
-function mapMarkerToPanel(marker) {
+export function mapMarkerToPanel(marker) {
     const panelMappings = {
         // Lipid Panel
         'LDL': 'Lipid Panel',
