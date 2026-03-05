@@ -44,23 +44,15 @@ function handleFileUpload() {
                 throw new Error('Unsupported file type');
             }
 
-            // Save new observations (append to existing and deduplicate by ID)
+            // Save new observations (append to existing and deduplicate by content)
             allObservations = [...allObservations, ...newObservations];
-            console.log('Parsed observations:', newObservations.slice(0, 3), '... (showing first 3)');
-            console.log('IDs of first 3 parsed:', newObservations.slice(0, 3).map(o => o.id));
+            console.log('Parsed observations:', newObservations.length);
             console.log('Total observations before dedup:', allObservations.length);
-            // Remove duplicates by ID, keeping first occurrence
-            const seenIds = new Set();
-            allObservations = allObservations.filter(obs => {
-                if (seenIds.has(obs.id)) {
-                    console.log('Filtering out duplicate ID:', obs.id);
-                    return false;
-                }
-                seenIds.add(obs.id);
-                return true;
-            });
-            console.log('Total observations after dedup:', allObservations.length);
+            // Deduplication happens in saveRecords via storage.js
             saveRecords(allObservations);
+            // Reload from storage to get deduplicated list
+            allObservations = loadRecords();
+            console.log('Total observations after dedup:', allObservations.length);
             filteredObservations = [...allObservations];
             displayObservations(filteredObservations);
             updateFilters();
