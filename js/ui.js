@@ -11,13 +11,6 @@ let filteredObservations = [];
 export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
-    document.getElementById('chart-panels').addEventListener('change', (e) => {
-        // Limit to 3 selections
-        const selected = Array.from(e.target.selectedOptions);
-        if (selected.length > 3) {
-            selected[selected.length - 1].selected = false;
-        }
-    });
 
     // Load existing observations
     allObservations = loadRecords();
@@ -152,15 +145,6 @@ function updateFilters() {
     markers.forEach(marker => {
         markerSelect.innerHTML += `<option value="${marker}">${marker}</option>`;
     });
-
-    // Populate chart panels multi-select
-    chartPanelSelect.innerHTML = '';
-    panels.forEach(panel => {
-        const option = document.createElement('option');
-        option.value = panel;
-        option.textContent = panel;
-        chartPanelSelect.appendChild(option);
-    });
 }
 
 /**
@@ -171,8 +155,6 @@ function applyFilters() {
     const dateTo = document.getElementById('date-to').value;
     const panel = document.getElementById('panel-filter').value;
     const marker = document.getElementById('marker-filter').value;
-
-    console.log('Applying filters - date:', dateFrom, dateTo, 'panel:', panel, 'marker:', marker);
 
     filteredObservations = allObservations.filter(obs => {
         const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
@@ -194,36 +176,8 @@ function applyFilters() {
         return true;
     });
 
-    console.log('Filtered observations:', filteredObservations.length);
     displayObservations(filteredObservations);
-    renderChartsWithSelectedPanels(filteredObservations);
-}
-
-/**
- * Render charts for selected panels only
- * @param {Array} observations
- */
-function renderChartsWithSelectedPanels(observations) {
-    const chartPanelSelect = document.getElementById('chart-panels');
-    const selectedPanels = Array.from(chartPanelSelect.selectedOptions).map(o => o.value);
-    
-    // If no panels selected, show all
-    if (selectedPanels.length === 0) {
-        renderCharts(observations);
-        return;
-    }
-
-    // Filter observations to only selected panels
-    const filtered = observations.filter(obs => {
-        let obsPanel = '';
-        if (obs.code && obs.code.text) {
-            const parts = obs.code.text.split(' - ');
-            obsPanel = parts[0];
-        }
-        return selectedPanels.includes(obsPanel);
-    });
-
-    renderCharts(filtered);
+    renderCharts(filteredObservations);
 }
 
 /**
