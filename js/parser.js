@@ -145,6 +145,20 @@ function parseFHIRBundle(bundle) {
             continue; // Skip invalid observations
         }
 
+        // Extract marker name from code.text or code.coding[0].display
+        let marker = '';
+        if (resource.code && resource.code.text) {
+            marker = resource.code.text;
+        } else if (resource.code && resource.code.coding && resource.code.coding[0]) {
+            marker = resource.code.coding[0].display || '';
+        }
+
+        // Map marker to a logical panel
+        const panel = mapMarkerToPanel(marker);
+
+        // Add panel and marker info to code.text for consistent extraction
+        resource.code.text = `${panel} - ${marker}`;
+
         observations.push(resource);
     }
 
@@ -154,6 +168,55 @@ function parseFHIRBundle(bundle) {
     }
 
     return observations;
+}
+
+/**
+ * Map marker names to logical panels
+ * @param {string} marker - Marker name
+ * @returns {string} Panel name
+ */
+function mapMarkerToPanel(marker) {
+    const panelMappings = {
+        // Lipid Panel
+        'LDL': 'Lipid Panel',
+        'HDL': 'Lipid Panel',
+        'Cholesterol Total': 'Lipid Panel',
+        'Triglycerides': 'Lipid Panel',
+        
+        // Metabolic Panel / Electrolytes
+        'Glucose Lvl': 'Metabolic Panel',
+        'Glucose': 'Metabolic Panel',
+        'BUN': 'Metabolic Panel',
+        'Creatinine Level': 'Metabolic Panel',
+        'Creatinine': 'Metabolic Panel',
+        'Sodium': 'Metabolic Panel',
+        'Potassium Lvl': 'Metabolic Panel',
+        'Chloride': 'Metabolic Panel',
+        'CO2': 'Metabolic Panel',
+        'Calcium': 'Metabolic Panel',
+        'Albumin': 'Metabolic Panel',
+        'Protein Total': 'Metabolic Panel',
+        
+        // Liver Function Panel
+        'ALT': 'Liver Function',
+        'AST': 'Liver Function',
+        'Bilirubin Total': 'Liver Function',
+        'Alk Phos': 'Liver Function',
+        'GGT': 'Liver Function',
+        
+        // Kidney Function
+        'BUN/Creat Ratio': 'Kidney Function',
+        'eGFR': 'Kidney Function',
+        
+        // Glucose Control
+        'Hemoglobin A1c': 'Glucose Control',
+        'eAvg Glucose': 'Glucose Control',
+        
+        // Anion Gap
+        'AGAP': 'Electrolytes'
+    };
+    
+    return panelMappings[marker] || 'Other';
 }
 
 /**
@@ -168,6 +231,9 @@ function convertFlatRecordToObservation(record) {
         'normal': 'N',
         'unknown': 'UNK'
     }[record.status] || 'UNK';
+
+    // If panel not provided, auto-map from marker
+    const panel = record.panel || mapMarkerToPanel(record.marker);
 
     return {
         resourceType: 'Observation',
@@ -186,7 +252,7 @@ function convertFlatRecordToObservation(record) {
                 code: 'UNK', // Would need mapping to actual LOINC codes
                 display: record.marker
             }],
-            text: `${record.panel} - ${record.marker}`
+            text: `${panel} - ${record.marker}`
         },
         subject: {
             reference: 'Patient/example' // Placeholder
