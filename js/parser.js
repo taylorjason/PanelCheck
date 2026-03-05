@@ -218,6 +218,11 @@ function convertFlatRecordToObservation(record) {
  * Generate a unique ID for a record
  * @returns {string} Unique ID
  */
+let idCounter = 0;
 function generateId() {
-    return crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random();
+    if (crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback: use timestamp + counter for uniqueness
+    return 'id-' + Date.now() + '-' + (idCounter++);
 }
