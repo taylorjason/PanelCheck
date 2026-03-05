@@ -24,8 +24,11 @@ export function renderCharts(observations) {
         if (!markerGroups[markerText]) {
             markerGroups[markerText] = [];
         }
+        // Extract date only (remove time)
+        const dateTime = obs.effectiveDateTime || obs.date;
+        const dateOnly = dateTime ? dateTime.split('T')[0] : 'Unknown';
         markerGroups[markerText].push({
-            x: obs.effectiveDateTime || obs.date,
+            x: dateOnly,
             y: obs.valueQuantity && obs.valueQuantity.value
         });
     });
