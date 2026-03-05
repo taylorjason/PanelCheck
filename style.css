@@ -1,0 +1,221 @@
+/* ── Reset / base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #f5f5f5;
+}
+
+header {
+    background: #2c5f8a;
+    color: #fff;
+    padding: 1rem 1.5rem;
+}
+
+header h1 { font-size: 1.4rem; }
+
+main {
+    max-width: 960px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ── Sections ─────────────────────────────────────────────────── */
+section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+}
+
+section h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.85rem;
+    color: #2c5f8a;
+}
+
+/* ── Upload section ───────────────────────────────────────────── */
+#upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+#upload-section input[type="file"] { cursor: pointer; }
+
+#upload-status {
+    font-size: 0.9rem;
+    color: #555;
+    min-height: 1.2em;
+}
+
+/* ── AI suggestion banner ─────────────────────────────────────── */
+.ai-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #eef5fd;
+    border: 1px solid #aac8e8;
+    border-radius: 5px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    color: #1a4a72;
+}
+
+.ai-suggestion p { flex: 1; }
+
+/* ── Settings section ─────────────────────────────────────────── */
+#settings-section { padding: 0; }
+
+.settings-toggle {
+    cursor: pointer;
+    user-select: none;
+    padding: 0.9rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.05rem;
+    color: #2c5f8a;
+    border-radius: 6px;
+}
+
+.settings-toggle:hover { background: #f0f4f8; }
+
+.toggle-indicator {
+    font-size: 0.75rem;
+    transition: transform 0.15s;
+}
+
+.toggle-indicator.open { transform: rotate(90deg); }
+
+.settings-body {
+    padding: 0 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    border-top: 1px solid #eee;
+}
+
+.settings-warning {
+    font-size: 0.82rem;
+    color: #8a6000;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 4px;
+    padding: 0.45rem 0.7rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.settings-row label { font-size: 0.9rem; white-space: nowrap; }
+
+.settings-row input[type="password"] {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: monospace;
+}
+
+#api-key-status {
+    font-size: 0.85rem;
+    color: #2e7d32;
+    min-height: 1.2em;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+button {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    background: #2c5f8a;
+    color: #fff;
+}
+
+button:hover { background: #1e4469; }
+
+#clear-api-key-btn {
+    background: #666;
+}
+
+#clear-api-key-btn:hover { background: #444; }
+
+#try-ai-btn {
+    white-space: nowrap;
+    background: #1565c0;
+}
+
+#try-ai-btn:hover { background: #0d47a1; }
+
+/* ── Filters section ──────────────────────────────────────────── */
+#filters-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+#filters-section > div {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+#filters-section label { font-size: 0.9rem; }
+
+#filters-section input[type="date"],
+#filters-section select {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.filter-hint {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* ── Data table ───────────────────────────────────────────────── */
+#records-table { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+th, td {
+    text-align: left;
+    padding: 0.45rem 0.65rem;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+th {
+    background: #f0f4f8;
+    font-weight: 600;
+    color: #333;
+}
+
+tr:hover { background: #fafafa; }
+
+/* ── Charts section ───────────────────────────────────────────── */
+#trend-chart { max-height: 360px; }
+
+/* ── Utility ──────────────────────────────────────────────────── */
+.hidden { display: none !important; }
