@@ -68,6 +68,7 @@ export function parseCSV(csv) {
             observations.push(observation);
         } catch (error) {
             // Skip invalid records
+            console.error('Error parsing row', i, ':', error);
             continue;
         }
     }

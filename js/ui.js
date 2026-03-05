@@ -46,12 +46,14 @@ function handleFileUpload() {
 
             // Save new observations (append to existing and deduplicate by ID)
             allObservations = [...allObservations, ...newObservations];
-            console.log('Parsed observations:', newObservations);
+            console.log('Parsed observations:', newObservations.slice(0, 3), '... (showing first 3)');
+            console.log('IDs of first 3 parsed:', newObservations.slice(0, 3).map(o => o.id));
             console.log('Total observations before dedup:', allObservations.length);
             // Remove duplicates by ID, keeping first occurrence
             const seenIds = new Set();
             allObservations = allObservations.filter(obs => {
                 if (seenIds.has(obs.id)) {
+                    console.log('Filtering out duplicate ID:', obs.id);
                     return false;
                 }
                 seenIds.add(obs.id);
