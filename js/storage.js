@@ -1,16 +1,16 @@
-const STORAGE_KEY = 'bloodwork_records';
+const STORAGE_KEY = 'bloodwork_observations';
 
 /**
- * Save records to localStorage
- * @param {Array} records - Array of bloodwork records
+ * Save FHIR Observations to localStorage
+ * @param {Array} observations - Array of FHIR Observation resources
  */
-export function saveRecords(records) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+export function saveRecords(observations) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(observations));
 }
 
 /**
- * Load records from localStorage
- * @returns {Array} Array of bloodwork records
+ * Load FHIR Observations from localStorage
+ * @returns {Array} Array of FHIR Observation resources
  */
 export function loadRecords() {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -18,7 +18,7 @@ export function loadRecords() {
 }
 
 /**
- * Clear all records from localStorage
+ * Clear all FHIR Observations from localStorage
  */
 export function clearRecords() {
     localStorage.removeItem(STORAGE_KEY);

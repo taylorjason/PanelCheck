@@ -11,26 +11,23 @@ QUnit.module('Storage Module', {
     }
 });
 
-QUnit.test('saveRecords stores records in localStorage', function(assert) {
-    const records = [
+QUnit.test('saveRecords stores observations in localStorage', function(assert) {
+    const observations = [
         {
+            resourceType: 'Observation',
             id: '1',
-            date: '2023-01-01',
-            panel: 'Lipid Panel',
-            marker: 'Cholesterol',
-            value: 200,
-            unit: 'mg/dL',
-            referenceMin: 0,
-            referenceMax: 200,
-            status: 'high',
-            source: 'test'
+            status: 'final',
+            effectiveDateTime: '2023-01-01',
+            code: { text: 'Lipid Panel - Cholesterol' },
+            valueQuantity: { value: 200, unit: 'mg/dL' },
+            interpretation: [{ coding: [{ code: 'H' }] }]
         }
     ];
 
-    saveRecords(records);
+    saveRecords(observations);
 
-    const stored = JSON.parse(localStorage.getItem('bloodwork_records'));
-    assert.deepEqual(stored, records, 'Records are stored correctly');
+    const stored = JSON.parse(localStorage.getItem('bloodwork_observations'));
+    assert.deepEqual(stored, observations, 'Observations are stored correctly');
 });
 
 QUnit.test('loadRecords returns empty array when no records', function(assert) {
@@ -38,47 +35,41 @@ QUnit.test('loadRecords returns empty array when no records', function(assert) {
     assert.deepEqual(records, [], 'Returns empty array when no records stored');
 });
 
-QUnit.test('loadRecords returns stored records', function(assert) {
-    const records = [
+QUnit.test('loadRecords returns stored observations', function(assert) {
+    const observations = [
         {
+            resourceType: 'Observation',
             id: '1',
-            date: '2023-01-01',
-            panel: 'Lipid Panel',
-            marker: 'Cholesterol',
-            value: 200,
-            unit: 'mg/dL',
-            referenceMin: 0,
-            referenceMax: 200,
-            status: 'high',
-            source: 'test'
+            status: 'final',
+            effectiveDateTime: '2023-01-01',
+            code: { text: 'Lipid Panel - Cholesterol' },
+            valueQuantity: { value: 200, unit: 'mg/dL' },
+            interpretation: [{ coding: [{ code: 'H' }] }]
         }
     ];
 
-    localStorage.setItem('bloodwork_records', JSON.stringify(records));
+    localStorage.setItem('bloodwork_observations', JSON.stringify(observations));
 
     const loaded = loadRecords();
-    assert.deepEqual(loaded, records, 'Returns stored records');
+    assert.deepEqual(loaded, observations, 'Returns stored observations');
 });
 
-QUnit.test('clearRecords removes all records', function(assert) {
-    const records = [
+QUnit.test('clearRecords removes all observations', function(assert) {
+    const observations = [
         {
+            resourceType: 'Observation',
             id: '1',
-            date: '2023-01-01',
-            panel: 'Lipid Panel',
-            marker: 'Cholesterol',
-            value: 200,
-            unit: 'mg/dL',
-            referenceMin: 0,
-            referenceMax: 200,
-            status: 'high',
-            source: 'test'
+            status: 'final',
+            effectiveDateTime: '2023-01-01',
+            code: { text: 'Lipid Panel - Cholesterol' },
+            valueQuantity: { value: 200, unit: 'mg/dL' },
+            interpretation: [{ coding: [{ code: 'H' }] }]
         }
     ];
 
-    localStorage.setItem('bloodwork_records', JSON.stringify(records));
+    localStorage.setItem('bloodwork_observations', JSON.stringify(observations));
     clearRecords();
 
-    const stored = localStorage.getItem('bloodwork_records');
-    assert.equal(stored, null, 'Records are cleared from localStorage');
+    const stored = localStorage.getItem('bloodwork_observations');
+    assert.equal(stored, null, 'Observations are cleared from localStorage');
 });

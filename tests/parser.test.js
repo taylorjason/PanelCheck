@@ -14,19 +14,16 @@ QUnit.test('parseCSV parses valid CSV', function(assert) {
 
     const result = parseCSV(csv);
 
-    assert.equal(result.length, 2, 'Parses two records');
+    assert.equal(result.length, 2, 'Parses two observations');
 
-    const firstRecord = result[0];
-    assert.equal(typeof firstRecord.id, 'string', 'Generates id');
-    assert.equal(firstRecord.date, '2023-01-01', 'Parses date');
-    assert.equal(firstRecord.panel, 'Lipid Panel', 'Parses panel');
-    assert.equal(firstRecord.marker, 'Cholesterol', 'Parses marker');
-    assert.equal(firstRecord.value, 200, 'Parses value as number');
-    assert.equal(firstRecord.unit, 'mg/dL', 'Parses unit');
-    assert.equal(firstRecord.referenceMin, 0, 'Parses referenceMin');
-    assert.equal(firstRecord.referenceMax, 200, 'Parses referenceMax');
-    assert.equal(firstRecord.status, 'high', 'Parses status');
-    assert.equal(firstRecord.source, 'test', 'Parses source');
+    const firstObs = result[0];
+    assert.equal(firstObs.resourceType, 'Observation', 'Creates FHIR Observation');
+    assert.equal(firstObs.status, 'final', 'Sets status to final');
+    assert.equal(firstObs.effectiveDateTime, '2023-01-01', 'Sets effectiveDateTime');
+    assert.equal(firstObs.valueQuantity.value, 200, 'Sets value');
+    assert.equal(firstObs.valueQuantity.unit, 'mg/dL', 'Sets unit');
+    assert.equal(firstObs.code.text, 'Lipid Panel - Cholesterol', 'Sets code text');
+    assert.equal(firstObs.interpretation[0].coding[0].code, 'H', 'Sets interpretation');
 });
 
 QUnit.test('parseCSV handles malformed rows', function(assert) {
@@ -58,8 +55,9 @@ QUnit.test('parseJSON parses flat JSON array', function(assert) {
     ]);
 
     const result = parseJSON(json);
-    assert.equal(result.length, 1, 'Parses one record');
-    assert.equal(result[0].date, '2023-01-01', 'Parses date');
+    assert.equal(result.length, 1, 'Parses one observation');
+    assert.equal(result[0].resourceType, 'Observation', 'Converts to FHIR Observation');
+    assert.equal(result[0].effectiveDateTime, '2023-01-01', 'Sets date');
 });
 
 QUnit.test('parseJSON parses FHIR Bundle', function(assert) {
@@ -110,13 +108,11 @@ QUnit.test('parseJSON parses FHIR Bundle', function(assert) {
 
     const result = parseJSON(JSON.stringify(fhirBundle));
     assert.equal(result.length, 1, 'Parses one observation');
-    const record = result[0];
-    assert.equal(record.date, '2023-01-01', 'Extracts date');
-    assert.equal(record.marker, 'Cholesterol', 'Extracts marker from display');
-    assert.equal(record.value, 200, 'Extracts value');
-    assert.equal(record.unit, 'mg/dL', 'Extracts unit');
-    assert.equal(record.status, 'high', 'Maps interpretation to status');
-    assert.equal(record.panel, 'Lipid Panel', 'Extracts panel from text');
+    const obs = result[0];
+    assert.equal(obs.resourceType, 'Observation', 'Returns FHIR Observation');
+    assert.equal(obs.id, 'chol-1', 'Preserves ID');
+    assert.equal(obs.effectiveDateTime, '2023-01-01', 'Preserves date');
+    assert.equal(obs.valueQuantity.value, 200, 'Preserves value');
 });
 
 QUnit.test('parseJSON handles invalid FHIR', function(assert) {

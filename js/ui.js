@@ -2,8 +2,8 @@ import { loadRecords, saveRecords } from './storage.js';
 import { parseCSV, parseJSON } from './parser.js';
 import { renderCharts } from './charts.js';
 
-let allRecords = [];
-let filteredRecords = [];
+let allObservations = [];
+let filteredObservations = [];
 
 /**
  * Initialize the UI
@@ -12,12 +12,12 @@ export function initUI() {
     document.getElementById('upload-btn').addEventListener('click', handleFileUpload);
     document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
 
-    // Load existing records
-    allRecords = loadRecords();
-    filteredRecords = [...allRecords];
-    displayRecords(filteredRecords);
+    // Load existing observations
+    allObservations = loadRecords();
+    filteredObservations = [...allObservations];
+    displayObservations(filteredObservations);
     updateFilters();
-    renderCharts(filteredRecords);
+    renderCharts(filteredObservations);
 }
 
 /**
@@ -34,23 +34,23 @@ function handleFileUpload() {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            let newRecords = [];
+            let newObservations = [];
             if (file.name.endsWith('.csv')) {
-                newRecords = parseCSV(e.target.result);
+                newObservations = parseCSV(e.target.result);
             } else if (file.name.endsWith('.json')) {
-                newRecords = parseJSON(e.target.result);
+                newObservations = parseJSON(e.target.result);
             } else {
                 throw new Error('Unsupported file type');
             }
 
-            // Save new records (append to existing)
-            allRecords = [...allRecords, ...newRecords];
-            saveRecords(allRecords);
-            filteredRecords = [...allRecords];
-            displayRecords(filteredRecords);
+            // Save new observations (append to existing)
+            allObservations = [...allObservations, ...newObservations];
+            saveRecords(allObservations);
+            filteredObservations = [...allObservations];
+            displayObservations(filteredObservations);
             updateFilters();
-            renderCharts(filteredRecords);
-            showStatus(`Uploaded ${newRecords.length} records`);
+            renderCharts(filteredObservations);
+            showStatus(`Uploaded ${newObservations.length} observations`);
         } catch (error) {
             showStatus(`Error: ${error.message}`);
         }
@@ -59,13 +59,13 @@ function handleFileUpload() {
 }
 
 /**
- * Display records in a table
- * @param {Array} records
+ * Display observations in a table
+ * @param {Array} observations
  */
-export function displayRecords(records) {
+export function displayObservations(observations) {
     const container = document.getElementById('records-table');
-    if (records.length === 0) {
-        container.innerHTML = '<p>No records to display</p>';
+    if (observations.length === 0) {
+        container.innerHTML = '<p>No observations to display</p>';
         return;
     }
 
@@ -73,14 +73,14 @@ export function displayRecords(records) {
     html += '<th>Date</th><th>Panel</th><th>Marker</th><th>Value</th><th>Unit</th><th>Status</th>';
     html += '</tr></thead><tbody>';
 
-    records.forEach(record => {
+    observations.forEach(obs => {
         html += `<tr>
-            <td>${record.date}</td>
-            <td>${record.panel}</td>
-            <td>${record.marker}</td>
-            <td>${record.value}</td>
-            <td>${record.unit}</td>
-            <td>${record.status}</td>
+            <td>${obs.effectiveDateTime || obs.date}</td>
+            <td>${obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : ''}</td>
+            <td>${obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : ''}</td>
+            <td>${obs.valueQuantity && obs.valueQuantity.value}</td>
+            <td>${obs.valueQuantity && obs.valueQuantity.unit}</td>
+            <td>${obs.interpretation && obs.interpretation[0] && obs.interpretation[0].coding[0].code}</td>
         </tr>`;
     });
 
@@ -95,8 +95,14 @@ function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
     const markerSelect = document.getElementById('marker-filter');
 
-    const panels = [...new Set(allRecords.map(r => r.panel))].sort();
-    const markers = [...new Set(allRecords.map(r => r.marker))].sort();
+    const panels = [...new Set(allObservations.map(obs => {
+        const text = obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : '';
+        return text;
+    }))].filter(Boolean).sort();
+    const markers = [...new Set(allObservations.map(obs => {
+        const text = obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : '';
+        return text;
+    }))].filter(Boolean).sort();
 
     panelSelect.innerHTML = '<option value="">All</option>';
     panels.forEach(panel => {
@@ -118,16 +124,20 @@ function applyFilters() {
     const panel = document.getElementById('panel-filter').value;
     const marker = document.getElementById('marker-filter').value;
 
-    filteredRecords = allRecords.filter(record => {
-        if (dateFrom && record.date < dateFrom) return false;
-        if (dateTo && record.date > dateTo) return false;
-        if (panel && record.panel !== panel) return false;
-        if (marker && record.marker !== marker) return false;
+    filteredObservations = allObservations.filter(obs => {
+        const obsDate = obs.effectiveDateTime ? obs.effectiveDateTime.split('T')[0] : '';
+        const obsPanel = obs.code && obs.code.text ? obs.code.text.split(' - ')[0] : '';
+        const obsMarker = obs.code && obs.code.text ? obs.code.text.split(' - ')[1] : '';
+
+        if (dateFrom && obsDate < dateFrom) return false;
+        if (dateTo && obsDate > dateTo) return false;
+        if (panel && obsPanel !== panel) return false;
+        if (marker && obsMarker !== marker) return false;
         return true;
     });
 
-    displayRecords(filteredRecords);
-    renderCharts(filteredRecords);
+    displayObservations(filteredObservations);
+    renderCharts(filteredObservations);
 }
 
 /**
