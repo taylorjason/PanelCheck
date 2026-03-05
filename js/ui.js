@@ -15,6 +15,13 @@ export function initUI() {
 
     // Load existing observations
     allObservations = loadRecords();
+    
+    // Re-process observations to apply updated panel mappings
+    allObservations = reprocessObservations(allObservations);
+    
+    // Save the re-processed data
+    saveRecords(allObservations);
+    
     filteredObservations = [...allObservations];
     displayObservations(filteredObservations);
     updateFilters();
@@ -113,8 +120,29 @@ export function displayObservations(observations) {
 }
 
 /**
- * Update filter options
+ * Re-process observations to apply updated panel mappings
  */
+function reprocessObservations(observations) {
+    return observations.map(obs => {
+        if (obs.code && obs.code.text) {
+            const parts = obs.code.text.split(' - ');
+            if (parts.length > 1) {
+                // Extract the marker (second part)
+                const marker = parts[1];
+                // Re-map to new panel
+                const newPanel = mapMarkerToPanel(marker);
+                // Update code.text with new panel
+                obs.code.text = `${newPanel} - ${marker}`;
+            } else {
+                // code.text is just the marker, map it
+                const marker = obs.code.text;
+                const panel = mapMarkerToPanel(marker);
+                obs.code.text = `${panel} - ${marker}`;
+            }
+        }
+        return obs;
+    });
+}
 function updateFilters() {
     const panelSelect = document.getElementById('panel-filter');
 
