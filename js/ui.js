@@ -193,6 +193,12 @@ function toggleMarker(marker) {
     
     updateSelectedMarkersDisplay(selectedMarkers);
     updateMarkerOptionsHighlight();
+    
+    // Keep dropdown open and maintain current search filter
+    const dropdown = document.getElementById('marker-dropdown');
+    const searchInput = document.getElementById('marker-search');
+    dropdown.style.display = 'block';
+    filterMarkerOptions(searchInput.value);
 }
 
 /**
@@ -226,6 +232,12 @@ window.removeMarker = function(marker) {
     const selectedMarkers = getSelectedMarkers().filter(m => m !== marker);
     updateSelectedMarkersDisplay(selectedMarkers);
     updateMarkerOptionsHighlight();
+    
+    // Keep dropdown open and maintain current search filter
+    const dropdown = document.getElementById('marker-dropdown');
+    const searchInput = document.getElementById('marker-search');
+    dropdown.style.display = 'block';
+    filterMarkerOptions(searchInput.value);
 };
 
 /**
