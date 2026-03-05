@@ -202,7 +202,11 @@ function updateMarkerOptions(markers) {
         option.className = 'marker-option';
         option.textContent = marker;
         option.dataset.marker = marker;
-        option.addEventListener('click', () => toggleMarker(marker));
+        option.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMarker(marker);
+        });
         markerOptions.appendChild(option);
     });
 }
@@ -235,6 +239,9 @@ function toggleMarker(marker) {
     
     // Restore scroll position
     markerOptions.scrollTop = scrollTop;
+    
+    // Keep focus on search input
+    searchInput.focus();
 }
 
 /**
@@ -314,23 +321,22 @@ function setupMarkerDropdown() {
     });
 
     searchInput.addEventListener('blur', () => {
-        hideTimeout = setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+        hideTimeout = setTimeout(() => { dropdown.style.display = 'none'; }, 200);
     });
 
     searchInput.addEventListener('input', (e) => {
         filterMarkerOptions(e.target.value);
     });
 
-    // Prevent hiding when clicking on dropdown or chips
-    dropdown.addEventListener('mousedown', () => {
+    // Prevent hiding when clicking on dropdown
+    dropdown.addEventListener('mousedown', (e) => {
+        e.preventDefault();
         clearTimeout(hideTimeout);
     });
 
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !dropdown.contains(e.target) && 
-            !e.target.classList.contains('marker-chip') && !e.target.classList.contains('remove-chip')) {
-            dropdown.style.display = 'none';
-        }
+    dropdown.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
     });
 }
 
