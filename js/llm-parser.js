@@ -110,7 +110,7 @@ async function callClaude(text, apiKey) {
             },
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 4096,
+                max_tokens: 8096,
                 messages: [{ role: 'user', content: prompt }],
             }),
         });
@@ -134,8 +134,21 @@ async function callClaude(text, apiKey) {
         throw new Error('Empty response from Claude API.');
     }
 
-    // Strip markdown code fences if the model wrapped the JSON
-    return text_out.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    // Extract the JSON array — find outermost [ ... ] to handle any surrounding text or fences
+    const start = text_out.indexOf('[');
+    if (start === -1) {
+        throw new Error('AI response contained no JSON array.');
+    }
+    let end = text_out.lastIndexOf(']');
+    if (end === -1 || end < start) {
+        // Response was truncated — salvage complete records by finding the last '}' inside the array
+        const lastBrace = text_out.lastIndexOf('}');
+        if (lastBrace === -1 || lastBrace < start) {
+            throw new Error('AI response was truncated before any complete records.');
+        }
+        return text_out.slice(start, lastBrace + 1) + ']';
+    }
+    return text_out.slice(start, end + 1);
 }
 
 // ─── Prompt ───────────────────────────────────────────────────────────────────

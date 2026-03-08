@@ -402,11 +402,22 @@ export function mapMarkerToPanel(marker) {
  * @param {ArrayBuffer} buffer
  * @returns {Promise<string>}
  */
+let _pdfjsLib = null;
+
+async function getPdfjsLib() {
+    if (_pdfjsLib) return _pdfjsLib;
+    const mod = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.mjs');
+    mod.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.mjs';
+    _pdfjsLib = mod;
+    return mod;
+}
+
 export async function extractTextFromPDF(buffer) {
-    if (typeof pdfjsLib === 'undefined') {
-        throw new Error('PDF.js is not loaded');
-    }
-    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdfjs = await getPdfjsLib();
+    // Slice a copy — PDF.js transfers (detaches) the buffer, which would
+    // prevent callers from reusing the original ArrayBuffer (e.g. for LLM retry).
+    const loadingTask = pdfjs.getDocument({ data: buffer.slice(0) });
     const pdf = await loadingTask.promise;
     let fullText = '';
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
